@@ -1,0 +1,24 @@
+
+
+
+#Host Parms That work well ...
+#
+host:
+  ip: $(HOST_IP)
+  iptables: true
+  interface: eni+
+  node: $(NODE_NAME)
+  port: 8181
+
+# This parms is initially set to "false"
+# Rbac and roles for kube2iam will fail is NOT set to "true"
+#
+rbac:
+  ## If true, create & use RBAC resources
+  ##
+  create: true
+
+# Turn on for verbose output ...
+#
+verbose: true
+

@@ -1,0 +1,11 @@
+eksctl create cluster \
+--profile stc-one-platform-dev \
+--name stc-004 \
+--version 1.14 \
+--region us-east-2 \
+--nodegroup-name ng \
+--node-type t3.large \
+--nodes 3 \
+--nodes-min 1 \
+--nodes-max 4 \
+--managed
