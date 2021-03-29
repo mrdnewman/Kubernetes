@@ -2728,17 +2728,8 @@ $ kubectl get secrets -o json | jq -r '.items[].data | select(has("tls.crt")) | 
 
 
 
-USER: test2
-Access key id: AKIAZKIOUBHTIBTJE6E3
-Secret key : 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
-
-arn:aws:iam::640517671398:user/test2
 
 
-[ #NEXUS ]
-
-USER: 	stcopsadmin
-PW:	ZjVmNGRlOWZkMDJmZTU1NTFmMTZmZGI1
 
 PATH_TO_WAR = Latest-n-greatest
 https://nexus.stchealthops.com/repository/raw-hosted/stc/iweb_az/v5.30.0/noarch/iweb_az_v5.30.0.war
