@@ -16,7 +16,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: chance_nelson@stchome.com
+    email: abc_123@acme.com
     privateKeySecretRef:
       name: production-issuer-acct-key
     dns01:
