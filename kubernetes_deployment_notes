@@ -2154,11 +2154,6 @@ aws s3 ls s3://stc-packerbuild-bucket/iq-afix-voms/applicationComponents/VOMS/AP
 
 Profile: stchome
 
-aws secret access key:
-w7jT64KUjEeBPuKy4rtBHZPmeVMBgJO7YDxVKW9P
-
-access key id:
-AKIAZEDIS7Q2GJ4KRAXD
 
 
 ------------------------------------
