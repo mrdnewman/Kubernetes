@@ -152,7 +152,7 @@ alias k='kubectl'
 alias kd='kubectl describe'
 alias gc='eksctl get clusters'
 alias kccc='kubectl config current-context'
-alias kswitch='aws eks --profile stc-one-platform-dev --region us-east-2 update-kubeconfig --name'
+alias kswitch='aws eks --profile myaws-account --region us-east-2 update-kubeconfig --name'
 
 k get pods , kd pods, gc, kccc, kswitch <cluster_name>
 
@@ -173,7 +173,7 @@ Which Context?
 $ kubectl config current-context
 
 Switch Context ...
-$ aws eks --profile stc-one-platform-dev --region us-east-2 update-kubeconfig --name stc-002
+$ aws eks --profile myaws-account --region us-east-2 update-kubeconfig --name stc-002
 
 View Config File
 $ kubectl config view
@@ -195,29 +195,29 @@ $ kubectl edit -n kube-system configmap/aws-auth
 apiVersion: v1
 data:
   mapAccounts: |
-    - "640517671398"
+    - "xxxxxx"
   mapRoles: |
     - groups:
       - system:bootstrappers
       - system:nodes
-      rolearn: arn:aws:iam::640517671398:role/eksctl-stc-002-nodegroup-ng-NodeInstanceRole-1CXLWUYPSA4QS
+      rolearn: arn:aws:iam::xxxxxx:role/eksctl-stc-002-nodegroup-ng-NodeInstanceRole-1CXLWUYPSA4QS
       username: system:node:{{EC2PrivateDNSName}}
   mapUsers: |
     - groups:
       - system:masters
-      userarn: arn:aws:iam::640517671398:user/cnelson
+      userarn: arn:aws:iam::xxxxxx:user/cnelson
       username: cnelson
     - groups:
       - system:masters
-      userarn: arn:aws:iam::640517671398:user/drose
+      userarn: arn:aws:iam::xxxxxx:user/drose
       username: drose
     - groups:
       - system:masters
-      userarn: arn:aws:iam::640517671398:user/arun
+      userarn: arn:aws:iam::xxxxxx:user/arun
       username: arun
     - groups:
       - system:masters
-      userarn: arn:aws:iam::640517671398:user/bbell
+      userarn: arn:aws:iam::xxxxxx:user/bbell
       username: bbell
 kind: ConfigMap
 metadata:
@@ -237,11 +237,11 @@ metadata:
 Name:			--> 
 
 Logging into AWS Console:
-https://stc-one-platform-dev.signin.aws.amazon.com/console
+https://aws.amazon.com/console
 
 [ AWS Setup ]
 
-AWS Account         	--> stc-one-platform-dev
+AWS Account         	--> myaws-account
 IAM User Name       	--> <UserName>
 Temp Password       	--> <Temp PW>
 
@@ -292,7 +292,7 @@ and attached to the instances and port 22 open for any source address.
 1.) Execute crt-Cluster.sh
 
 eksctl create cluster \
---profile stc-one-platform-dev \
+--profile myaws-account \
 --name stc-sandbox01 \
 --version 1.14 \
 --region us-east-2 \
@@ -881,14 +881,14 @@ https://docs.aws.amazon.com/eks/latest/userguide/migrate-stack.html
 (Just Migrate to a New Node Group / Delete the bad one)
 
 $ kubectl get events
-$ eksctl get nodegroups --cluster=stc --profile=stc-one-platform-dev
+$ eksctl get nodegroups --cluster=stc --profile=myaws-account
 $ <Run script that creates new nodegroup>
 $ eksctl delete nodegroup --cluster=<clust_name> --profile=<prof_name> --name=<bad_nodegroup>
 $ kubectl  get pods -o wide
 
 If that Doesn't work -- Trying scaling Node Group Down, then back up ...
-$ eksctl scale nodegroup --cluster=stc --profile=stc-one-platform-dev --nodes=1 --name=ng
-$ eksctl scale nodegroup --cluster=stc --profile=stc-one-platform-dev --nodes=3 --name=ng
+$ eksctl scale nodegroup --cluster=stc --profile=myaws-account --nodes=1 --name=ng
+$ eksctl scale nodegroup --cluster=stc --profile=myaws-account --nodes=3 --name=ng
 
 
 
@@ -968,7 +968,7 @@ Step: 1b
             "Action": [
                 "sts:AssumeRole"
             ],
-            "Resource": "arn:aws:iam::640517671398:role/k8s-*"
+            "Resource": "arn:aws:iam::xxxxxx:role/k8s-*"
         }
     ]
 }
@@ -1034,7 +1034,7 @@ Step: 3C (Edit Trust Reltionship on Role: "k8s-dns01-validation")
       "Sid": "",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::640517671398:role/eksctl-devops-nodegroup-ng-1-NodeInstanceRole-62NSM1D0PF0Z"
+        "AWS": "arn:aws:iam::xxxxxx:role/eksctl-devops-nodegroup-ng-1-NodeInstanceRole-62NSM1D0PF0Z"
       },
       "Action": "sts:AssumeRole"
     }
@@ -1180,7 +1180,7 @@ pw:	  G7VuD^us123
     sed -i"" -e "s|<KEYCLOAK_URL_WITH_REALM>|${KC_URL_SAML}|g" "${VOMS_PROCESS_JSON}"; \
     sed -i"" -e "s|<VOMS_URL>|${VOM_HOST}|g" "${VOMS_APPS_JSON}"; \
 
-ENV KC_ENDPOINT https://keycloak-sndbx001.hostk8s2.com/sso
+ENV KC_ENDPOINT https://kc.com/sso
 ENV VOMS_HOST vomsapp-devops.hostk8s2.com
 ENV KC_URL_SAML="${KC_ENDPOINT}/protocol/saml"
 
@@ -1492,8 +1492,8 @@ whereis python3
 
 AWS CRED VARIABLES ...
 ----------------------
-AWS_SECRET_ACCESS_KEY=$(aws --profile stc-one-platform-dev configure get aws_secret_access_key)
-AWS_ACCESS_KEY_ID=$(aws --profile stc-one-platform-dev configure get aws_access_key_id)
+AWS_SECRET_ACCESS_KEY=$(aws --profile myaws-account configure get aws_secret_access_key)
+AWS_ACCESS_KEY_ID=$(aws --profile myaws-account configure get aws_access_key_id)
 
 docker build -t keycloak --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY .
 
@@ -2050,7 +2050,7 @@ AWS DELETE SECRETS PERM
 ========================
 
 $ aws secretsmanager delete-secret --region us-east-2 --secret-id \
-  remove-this-secret --force-delete-without-recovery --profile stc-one-platform-dev
+  remove-this-secret --force-delete-without-recovery --profile myaws-account
 
 
 Setting up Amazon EKS: What you must know
@@ -2247,7 +2247,7 @@ T.S. Steps:
 $ k get ing
 $ k get certificates
 
-$ curl -vkI https://vomsapp-sndbx001.hostk8s2.com/
+$ curl -vkI https://abc-server.com/
   
   - Check "issuer" ... If it mentions Fake Certificate 
 
@@ -2384,12 +2384,12 @@ Solution ...
 apiVersion: v1
 data:
   mapAccounts: |
-    - "640517671398"
+    - "xxxxxx"
   mapRoles: |
     - groups:
       - system:bootstrappers
       - system:nodes
-      rolearn: arn:aws:iam::640517671398:role/eksctl-stc-002-nodegroup-ng-t2xlr-NodeInstanceRole-11WPZJAODEFC7
+      rolearn: arn:aws:iam::xxxxxx:role/eksctl-stc-002-nodegroup-ng-t2xlr-NodeInstanceRole-11WPZJAODEFC7
       username: system:node:{{EC2PrivateDNSName}}
 
 NOTE: If you don't see the above content then something is wrong. 
@@ -2415,7 +2415,7 @@ NOTE: If you don't see the above content then something is wrong.
       "Sid": "",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::640517671398:role/<"NewNodeInstanceRole">
+        "AWS": "arn:aws:iam::xxxxxx:role/<"NewNodeInstanceRole">
       },
       "Action": "sts:AssumeRole"
     }
@@ -2438,7 +2438,7 @@ NOTE: If you don't see the above content then something is wrong.
       "Sid": "",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::640517671398:role/<"NewNodeInstanceRole">"
+        "AWS": "arn:aws:iam::xxxxxx:role/<"NewNodeInstanceRole">"
       },
       "Action": "sts:AssumeRole"
     }
@@ -2516,7 +2516,7 @@ ref: https://aws.amazon.com/premiumsupport/knowledge-center/eks-iam-permissions-
 ref: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#default-roles-and-role-bindings
 
 KEY NOTE: None of this worked until I attached "ROLE POLICY" to USER ...
-$ aws sts assume-role --role-arn arn:aws:iam::640517671398:role/eks-role-full-rights-namespace --role-session-name test2
+$ aws sts assume-role --role-arn arn:aws:iam::xxxxxx:role/eks-role-full-rights-namespace --role-session-name test2
 
 
 
@@ -2550,13 +2550,13 @@ process.json file ...
       "cwd"         : "/home/node/voms",
       "env": {
         "PRODUCT"                : "voms",
-        "HOST"                   : "vomsapp-sndbx001.hostk8s2.com",
+        "HOST"                   : "abc-server.com",
         "APIHOST"                : "localhost",
         "PORT"                   : "3102",
         "APIPORT"                : "3131",
         "NODE_ENV"               : "production",
         "SAML_ISSUER"            : "voms",
-        "SAML_ENTRY_POINT"       : "https://keycloak-sndbx001.hostk8s2.com/sso/protocol/saml",
+        "SAML_ENTRY_POINT"       : "https://kc.com/sso/protocol/saml",
         "JASPER_SERVER"          : "<JASPER_URL>",
         "REDIS_URL"              : "redis://localhost:6379",
         "ENABLE_SSL"             : true,
@@ -2574,7 +2574,7 @@ process.json file ...
       "env": {
         "SESSION_SECRET"         : "this is a secret",
         "PRODUCT"                : "voms",
-        "HOST"                   : "vomsapp-sndbx001.hostk8s2.com",
+        "HOST"                   : "abc-server.com",
         "APIHOST"                : "localhost",
         "PORT"                   : "3102",
         "APIPORT"                : "3131",
@@ -2582,7 +2582,7 @@ process.json file ...
         "REVERSE_PROXY"          : "true",
         "NODE_ENV"               : "production",
         "SAML_ISSUER"            : "voms",
-        "SAML_ENTRY_POINT"       : "https://keycloak-sndbx001.hostk8s2.com/sso/protocol/saml",
+        "SAML_ENTRY_POINT"       : "https://kc.com/sso/protocol/saml",
         "JASPER_SERVER"          : "<JASPER_URL>",
         "KEYCLOAK_SESSION_MAX"   : "30",
         "REDIS_URL"              : "redis://localhost:6379",
@@ -2620,7 +2620,7 @@ process.json file ...
         "APIPORT"                : "3131",
         "SERVICE_PORT"           : "3061",
         "SAML_ISSUER"            : "voms",
-        "SAML_ENTRY_POINT"       : "https://keycloak-sndbx001.hostk8s2.com/sso/protocol/saml",
+        "SAML_ENTRY_POINT"       : "https://kc.com/sso/protocol/saml",
         "JASPER_SERVER"          : "<JASPER_URL>",
         "KEYCLOAK_SESSION_MAX"   : "30",
         "REDIS_URL"              : "redis://localhost:6379",
@@ -2675,7 +2675,7 @@ PW: bloom$
 [ #NODEGROUP ]
 
 -- Get Node Info
-$ eksctl get nodegroups --cluster=<cluster_name> --profile=stc-one-platform-dev
+$ eksctl get nodegroups --cluster=<cluster_name> --profile=myaws-account
 
 -- Check Nodes Health
 $ eksctl utils nodegroup-health --cluster <clstr_name> --name <ng_name>
@@ -2792,10 +2792,10 @@ AttributeName=type,AttributeType=S --key-schema AttributeName=id,KeyType=HASH \
 AttributeName=userid,KeyType=RANGE --global-secondary-indexes \
 'IndexName=type-userid-index,KeySchema=[{AttributeName=type,KeyType=HASH},{AttributeName=userid,KeyType=RANGE}],Projection={ProjectionType=INCLUDE,NonKeyAttributes=[id,userid,type,locked]},ProvisionedThroughput={ReadCapacityUnits=5,WriteCapacityUnits=5}' \
 --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
---region us-east-2 --profile stc-one-platform-dev --table-name awssb-test01
+--region us-east-2 --profile myaws-account --table-name awssb-test01
 
   1a.) Verify Results
-       $ aws dynamodb list-tables --region us-east-2 --profile stc-one-platform-dev
+       $ aws dynamodb list-tables --region us-east-2 --profile myaws-account
 
        {
               "TableNames": [
@@ -2886,7 +2886,7 @@ THIS IS THE COMBINED POLICIES TO FORM SINGLE ROLE
                 "dynamodb:GetItem",
                 "dynamodb:DeleteItem"
             ],
-            "Resource": "arn:aws:dynamodb:us-east-2:640517671398:table/awssb-test01",
+            "Resource": "arn:aws:dynamodb:us-east-2:xxxxxx:table/awssb-test01",
             "Effect": "Allow"
         },
         {
@@ -2895,8 +2895,8 @@ THIS IS THE COMBINED POLICIES TO FORM SINGLE ROLE
                 "ssm:GetParameters"
             ],
             "Resource": [
-                "arn:aws:ssm:us-east-2:640517671398:parameter/asb-*",
-                "arn:aws:ssm:us-east-2:640517671398:parameter/Asb*"
+                "arn:aws:ssm:us-east-2:xxxxxx:parameter/asb-*",
+                "arn:aws:ssm:us-east-2:xxxxxx:parameter/Asb*"
             ],
             "Effect": "Allow"
         }
