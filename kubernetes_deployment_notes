@@ -1,0 +1,3231 @@
+
+
+
+				[ Kubernetes Cluster EKS ]
+
+
+
+
+Docker & Kubernetes tutorial 4 Hours long ...
+https://www.youtube.com/watch?v=bhBSlnQcq2k&list=TLPQMDExMDIwMjChB4C5h9YuJQ&index=8
+
+Kubenetes app to rds
+https://www.bogotobogo.com/DevOps/Docker/Docker_Kubernetes_AWS_4_Django_with_RDS_Kops.php
+https://dev.to/bensooraj/accessing-amazon-rds-from-aws-eks-2pc3
+
+NOTE: Very Good One - Descriptive
+Jenkins Pipeline as Code, CI/CD Of Docker based applications
+https://www.youtube.com/watch?v=gdbA3vR2eDs
+
+STUDY ...
+# Kubernetes Concepts Explained in 9 minutes! ( Use for YOUR DIAGRAM!)
+https://www.youtube.com/watch?v=QJ4fODH6DXI
+
+# RBACK (Creating Users, Roles & Rolebinding)
+https://www.youtube.com/watch?v=U67OwM-e9rQ&feature=emb_rel_pause
+
+# HELM
+https://www.youtube.com/watch?v=fy8SHvNZGeE&feature=emb_rel_pause
+
+
+# KUBENS  (Tool for Navigating Namespaces)
+
+# MULTI-PORT Services Configuration
+https://kubernetes.io/docs/concepts/services-networking/service/#services-without-selectors
+
+k get pods -o wide  (Shows each running pod's ip and associated host/worker node)
+k get svc  (Shows current servie and its' ports usage.)
+
+
+
+					[ EKS CLUSTER ARCHITECTURE ]
+
+k8s Architecture (Must Review)
+https://rtfm.co.ua/en/kubernetes-part-1-architecture-and-main-components-overview/
+https://medium.com/google-cloud/kubernetes-101-pods-nodes-containers-and-clusters-c1509e409e16
+
+=================================/////==================================================
+Kubernetes: Container Orchestration, Automation
+
+
+                         MASTER
+--------------------------------------------------------------------
+-Kubernetes API Server  
+ 			/// All kube binaries (kubectl) use this API
+                            Tells Master what to do and the Master tells 
+                            the "Worker Nodes". 
+-Scheduler             ///  Will assign work to the least busiest pod
+-Controller Manager
+-etcd
+--------------------------------------------------------------------
+                            |
+                            |
+-------------------------------------------------
+Containers run on top of these bad boys ...
+[ Worker Node ] [ Worker Node ] [ Worker Node ]
+-------------------------------------------------
+
+$ kubectl get nodes
+$ kubectl get cluster-info
+
+
+Get logs Of Containers 
+https://kubectl.docs.kubernetes.io/pages/container_debugging/container_logs.html
+i.e,
+# Follow logs from container
+kubectl logs nginx-78f5d695bd-czm8z -f
+
+
+
+Scale up/down Desire State Of Running Deployment
+-------------------------------------------------
+1.) Describe Current Running Deployment
+$ kubectl get deployments		/// Spits out "deployment_name"
+$ kubectl edit deployment <deployment_name>
+
+Note: You're in the manifest now ... Just increase the "replicas: 3" to the desired number.
+      Now save the file. 
+
+Important Note: Can change "replica #" & "image to pull" on the fly as well
+                Kube will start tearing down old pods replacing them w/ new replica # and Image specified. 
+
+
+Container IP / Worker Node
+----------------------------------
+$ kubectl get pods -o wide
+
+NOTE:
+Containers have internal IP's - not expose to outside world
+SERVICES -- Exposes pods/containers to the Internet
+
+
+Read Manifest of Any Pod like so ...
+-------------------------------------
+kubectl get pods cert-manager-5554bb48c-d5jnz -o yaml -n kube-system		// This will show manifiest of cert-manager pod.
+
+
+
+
+
+
+[ Let's Get To It! ]
+
+Prereqs ...
+
+			
+*** Install EKS Binaries ***
+
+-- eksctl
+RES>> https://eksworkshop.com/eksctl/launcheks.html
+$ curl --silent --location \
+  "https://github.com/weaveworks/eksctl/releases/download/latest_release/eksctl_$(uname -s)_amd64.tar.gz" \
+  | tar xz -C /tmp
+$ sudo mv /tmp/eksctl /usr/local/bin
+$ eksctl --help
+
+
+-- kubectl 
+RES>> https://kubernetes.io/docs/tasks/tools/install-kubectl/
+$ cd /tmp
+$ curl -LO \
+  https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+$ chmod +x kubectl
+$ sudo mv ./kubectl /usr/local/bin/kubectl
+$ kubectl version
+
+
+-- aws-iam-authenticator
+RES>> https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html
+$ cd /tmp
+$ curl -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.13.7/2019-06-11/bin/linux/amd64/aws-iam-authenticator
+$ chmod +x ./aws-iam-authenticator
+$ sudo mv ./aws-iam-authenticator /usr/local/bin/aws-iam-authenticator
+$ aws-iam-authenticator help | version 
+
+
+*** Setup .bashrc alias's ***
+ 
+vi ~/.bashrc
+
+# Kubernetes
+alias k='kubectl'
+alias kd='kubectl describe'
+alias gc='eksctl get clusters'
+alias kccc='kubectl config current-context'
+alias kswitch='aws eks --profile stc-one-platform-dev --region us-east-2 update-kubeconfig --name'
+
+k get pods , kd pods, gc, kccc, kswitch <cluster_name>
+
+source ~/.bashrc
+
+
+Get Short Version
+$ kubectl version --short
+
+Is Everything Running In Cluster ...
+$ kubectl get all --all-namespaces
+
+Get Cluster Info ...
+$ kubectl cluster-info
+$ kubectl cluster-info dump
+
+Which Context?
+$ kubectl config current-context
+
+Switch Context ...
+$ aws eks --profile stc-one-platform-dev --region us-east-2 update-kubeconfig --name stc-002
+
+View Config File
+$ kubectl config view
+
+
+
+
+***************************
+*** ADD USER To Cluster ***
+***************************
+
+$ kubectl edit -n kube-system configmap/aws-auth
+
+
+# Please edit the object below. Lines beginning with a '#' will be ignored,
+# and an empty file will abort the edit. If an error occurs while saving this file will be
+# reopened with the relevant failures.
+#
+apiVersion: v1
+data:
+  mapAccounts: |
+    - "640517671398"
+  mapRoles: |
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      rolearn: arn:aws:iam::640517671398:role/eksctl-stc-002-nodegroup-ng-NodeInstanceRole-1CXLWUYPSA4QS
+      username: system:node:{{EC2PrivateDNSName}}
+  mapUsers: |
+    - groups:
+      - system:masters
+      userarn: arn:aws:iam::640517671398:user/cnelson
+      username: cnelson
+    - groups:
+      - system:masters
+      userarn: arn:aws:iam::640517671398:user/drose
+      username: drose
+    - groups:
+      - system:masters
+      userarn: arn:aws:iam::640517671398:user/arun
+      username: arun
+    - groups:
+      - system:masters
+      userarn: arn:aws:iam::640517671398:user/bbell
+      username: bbell
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2020-03-13T21:14:26Z"
+  name: aws-auth
+  namespace: kube-system
+  resourceVersion: "6418586"
+  selfLink: /api/v1/namespaces/kube-system/
+
+
+
+
+***********************				
+*** GIVE USER CREDS ***
+***********************
+-----------------------------------------------------------------
+Name:			--> 
+
+Logging into AWS Console:
+https://stc-one-platform-dev.signin.aws.amazon.com/console
+
+[ AWS Setup ]
+
+AWS Account         	--> stc-one-platform-dev
+IAM User Name       	--> <UserName>
+Temp Password       	--> <Temp PW>
+
+AWS Access Key Id   	--> <xxxxx>
+AWS Secret Access Key   --> <xxxxx>
+
+
+[ Cluster Setup ]
+
+Cluster Name        	--> stc-002
+NameSpace	    	--> pkannapiran
+
+Special Notes:
+
+
+-------------------------------------------------------------------
+
+[ Send Creds To User: Cut-N-Paste >>> privnote.com ]
+
+
+
+
+				[ #CLUSTER INSTALL ]
+
+=================================/////=====================================================
+
+URL_RESOURCES
+https://docs.aws.amazon.com/
+
+https://gruntwork.io/guides/kubernetes/how-to-deploy-production-grade-kubernetes-cluster-aws/#what-is-kubernetes
+Note: Good for Review and Interview Q/A
+
+https://docs.aws.amazon.com/eks/latest/userguide/eks-ug.pdf
+ON PAGE: 7
+
+NOTE:
+When an Amazon EKS cluster is created, the IAM entity (user or role) that 
+creates the cluster is added to the Kubernetes RBAC authorization table as 
+the administrator. Initially, only that IAM user can make calls to the Kubernetes 
+API server using kubectl.
+
+-- Generate ssh keypair
+If you enable it (--ssh-access=true), your ~/.ssh/id_rsa.pub will get imported 
+and attached to the instances and port 22 open for any source address.
+
+
+
+1.) Execute crt-Cluster.sh
+
+eksctl create cluster \
+--profile stc-one-platform-dev \
+--name stc-sandbox01 \
+--version 1.14 \
+--region us-east-2 \
+--nodegroup-name ng-sb1 \
+--node-type t3.medium \
+--nodes 3 \
+--nodes-min 1 \
+--nodes-max 4 \
+--managed
+
+***
+Ref: https://eksctl.io/usage/creating-and-managing-clusters/
+***
+
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: devops
+  region: us-east-2
+
+nodeGroups:
+  - name: ng-1
+    instanceType: t3.xlarge
+    desiredCapacity: 3
+    ssh:
+      allow: true # will use ~/.ssh/id_rsa.pub as the default ssh key
+
+
+					
+=================================[#HELM NOTES]=====================================================
+Helm Docs
+https://v2.helm.sh/docs/
+
+======
+ISSUES
+======
+How to resolve https://kubernetes-charts.storage.googleapis.com" is not a valid chart repository
+https://stackoverflow.com/questions/61954440/how-to-resolve-https-kubernetes-charts-storage-googleapis-com-is-not-a-valid
+
+==================
+INSTALL STEPS @ URL
+==================
+URL --> https://computingforgeeks.com/install-and-use-helm-2-on-kubernetes-cluster/
+
+=====================
+OR FOLLOW THESE STEPS
+=====================
+Step 1.
+curl -L https://git.io/get_helm.sh | bash
+
+NOTE: 
+Installation Output ...
+Helm v2.16.1 is available. Changing from version
+Downloading https://get.helm.sh/helm-v2.16.1-linux-amd64.tar.gz
+Preparing to install helm and tiller into /usr/local/bin
+helm installed into /usr/local/bin/helm
+tiller installed into /usr/local/bin/tiller
+
+Step 2.
+$ helm init	(This configures "HELM")
+$ helm version
+
+Step 3. 
+$ kubectl apply tiller_rbac-config.yml		(Create the resources in Kubernetes using the kubectl command)
+--Comfrim--		
+$ kubectl get serviceaccount tiller -n kube-system
+$ kubectl get clusterrolebinding tiller -n kube-system
+
+
+SAMPLE OUTPUT ...
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tiller
+    namespace: kube-system
+
+Step 4 (Deploy tiller and Initialize Helm)
+helm init --service-account=tiller \
+   --stable-repo-url=https://kubernetes-charts.storage.googleapis.com \
+   --upgrade \
+   --automount-service-account-token=true \
+   --replicas=1 \
+   --history-max=100 \
+   --wait
+
+Step 5 (See "tiller-deploy")
+$ kubectl get deployment -n kube-system
+
+
+helm repo add stable https://charts.helm.sh/stable
+helm repo add svc-cat https://kubernetes-sigs.github.io/service-catalog
+
+==========================================[#HELM NOTES]==============================================
+
+
+
+
+
+==========================================[MIGRATE HELM VERSION]======================================
+
+
+One or more Amazon EC2 Subnets of [subnet-02b3068bebc13d971, subnet-0999cf885b5360080, 
+subnet-012040df4bf9683fa] for node group devops-ng2 does not automatically assign public IP addresses to instances 
+launched into it. If you want your instances to be assigned a public IP address, then you need to  See IP addressing in VPC guide: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ip-addressing.html#subnet-public-ip
+
+enable auto-assign public IP address for the subnet.
+
+
+UPDATING CLUSTER
+https://docs.aws.amazon.com/eks/latest/userguide/update-cluster.html#1-15-prerequisites
+
+UPDATING NODEGROUP
+eksctl get nodegroup --cluster devops		(Res --> https://eksctl.io/usage/managing-nodegroups/)
+eksctl upgrade nodegroup --name=<node-group-name> --cluster=<cluster-name>
+
+
+					Get Kubectl Version
+kubectl version --short --client=true
+Client Version: v1.20.2
+
+
+URL ---> https://helm.sh/blog/migrate-from-helm-v2-to-helm-v3/
+
+v3
+$ helm3 list -A		(Shows all install helm charts)
+
+Installing Kubernetes Service Catalog
+$ helm3 repo add svc-cat https://svc-catalog-charts.storage.googleapis.com
+$ helm3 install catalog svc-cat/catalog --namespace catalog
+
+Installing the AWS Service Broker
+$ helm3 repo add aws-sb https://awsservicebroker.s3.amazonaws.com/charts
+$ helm3 inspect chart aws-sb/aws-servicebroker
+$ kubectl create namespace aws-sb  (Helm Version 3 Does NOT create Namespaces -- BUG)
+$ helm install aws-sb/aws-servicebroker --name aws-servicebroker --namespace aws-sb
+
+Error Fetching the catalog ... Work on that. 
+
+
+-- Install Helm --
+
+1.) Goto ... https://helm.sh/docs/intro/install/		Latest binaries ---> https://github.com/helm/helm/releases?after=v2.8.0
+2.) Click --> Download your desired version
+3.) Scroll down to desired version and click 
+4.) Navigate to download directory and untar
+    sudo tar -xvf helm-v2.16.1-linux-amd64.tar.gz   	// This creates linux-amd64 directory 
+5.) cd linux-amd64
+6.) Copy "helm" binary to /usr/local/bin/
+7.) helm version --short --client  		   	// This gets helms client version
+
+-- Setup Helm / Tiller --
+
+1.) Initialize Helm					// This will deploy a "Tiller Pod" // Will also create /home/d22newman/.helm
+2.) Create Tiller Service Account & Rolebinding
+3.) Install Tiller Patch				// Permssion won't work w/o it -- Here's the article for ref: https://github.com/fnproject/fn-helm/issues/21
+3.) Verify deployment
+4.) List helm home articels				// Shows ... cache  plugins  repository  starters
+
+$ helm init
+$ kubectl apply -f tiller_rbac-config.yml
+$ kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+$ kubectl -n kube-system get deploy,replicaset,pod,serviceaccount,clusterrolebinding | grep tiller
+$ helm home						
+
+ -- Yaml Code --
+0x98C43A980E0bcDa7f94c91Fc50946af9F55878ca
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tiller
+    namespace: kube-system
+
+[[[ -- DELETE HELM / TILLER -- ]]]
+-------------------------------------------------
+$ kubectl delete all -l app=helm -n kube-system   (This Seems To Work Nicely)
+
+	pod "tiller-deploy-8557598fbc-5b2g7" deleted
+	service "tiller-deploy" deleted
+	deployment.apps "tiller-deploy" deleted
+	replicaset.apps "tiller-deploy-75f6c87b87" deleted
+	replicaset.apps "tiller-deploy-8557598fbc" deleted
+
+OR TRY
+
+You have to uninstall 3 things to completely get rid of tiller:
+
+Deployment
+Service
+Secret
+    kubectl delete deployment -n some-namespace tiller-deploy 
+    kubectl delete svc -n some-namespace tiller-deploy 
+    kubectl delete secret -n some-namespace tiller-secret
+--------------------------------------------------
+$ helm reset --force
+$ kubectl delete -f tiller_rbac-config.yml
+$ rm -rf /home/d22newman/.helm
+$ kubectl -n kube-system get deploy,replicaset,pod,serviceaccount,clusterrolebinding | grep tiller 
+
+There's more ...
+
+-- List Helm Repo's --
+$ helm repo list
+
+-- Search Particular Helm Repo --
+$ helm search stable
+
+-- Helm Charts / Repos --
+https://hub.helm.sh/
+https://kubernetes-charts.storage.googleapis.com/
+https://charts.jetstack.io
+https://github.com/helm/
+
+-- Add Helm Repo's --
+$ helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+$ helm repo add jetstack https://charts.jetstack.io
+
+-- Update your local Helm chart repository cache --
+$ helm repo update
+
+-- Inspect Chart --
+$ helm inspect <repo_name>/<chart_name>
+
+-- Download Charts --
+$ helm fetch stable/cert-manager        // helm fetch [flags] [chart URL | repo/chartname] [...]
+$ tar zxvf nginx-ingress-1.26.2.tgz 	// will create nginx-ingress dir, just cd into it and find said yaml files
+
+-- Remove Repo --
+$ helm repo remove nginx-stable
+
+
+-- Helm Rollback Version --
+
+Get History ...
+$ helm history <release_name>
+
+Rollback Release To Previous Revision Number ...
+$ helm rollback nginx-ingress <rev_#>
+
+
+			
+-- Release / Notes --
+
+When you install "Helm" it's going to look at your ~/.kube/config file ...
+Tiller takes care of all the deployments for any namespace ...
+
+When you install tiller - You're basically giving full sudo/admin rights to tiller.
+Not ideas for sake of security.
+
+Tiller removed in helm 3, helm init no longer necessary.
+Helm 3 now supports all the modern security, identity, and authorization features 
+of modern Kubernetes. Helm’s permissions are evaluated using your kubeconfig file. 
+
+* single-service architecture with no client/server split — no more Tiller
+* embedded Lua engine for scripting
+
+-- URL RES --
+
+https://www.digitalocean.com/community/tutorials/how-to-install-software-on-kubernetes-clusters-with-the-helm-package-manager
+https://helm.sh/
+https://banzaicloud.com/blog/creating-helm-charts/
+
+Helm / Tiller RBAC Setup
+https://medium.com/@elijudah/configuring-minimal-rbac-permissions-for-helm-and-tiller-e7d792511d10
+
+-- Youtube Res --
+youtube --- "just me helm"
+
+
+
+
+
+			[ nginx-ingress controller ]
+=================================/////=====================================================
+
+-- Install Helm Chart: nginx-ingress controller --
+-- Check External IP --
+-- Check that pods are running --
+-- Get logs from ingress pods --
+-- Get everything about controller --
+
+helm install --name nginx-ingress \
+  --namespace=nginx-ingress \   
+  --set rbac.create=true,controller.kind=DaemonSet,controller.service.type=LoadBalancer,controller.hostNetwork=true,controller.extraArgs.report-node-internal-ip-address=true stable/nginx-ingress
+
+$ helm upgrade nginx-ingress \
+   --namespace=nginx-ingress \
+   --set rbac.create=true,controller.kind=DaemonSet,controller.service.type=LoadBalancer,controller.hostNetwork=true,controller.extraArgs.report-node-internal-ip-address=true stable/nginx-ingress
+
+-- Parm definitions in helm upgrade command above --
+https://github.com/helm/charts/tree/master/stable/nginx-ingress  // Under "Configuration"
+
+
+$ helm ls				// Shows helms charts version installed ...
+$ kubectl get svc --n <name_space>
+$ kubectl get pods -n <name_space>
+$ kubectl logs -n <name_space> <pod_name>
+$ kubectl get all -n nginx-ingress
+
+
+-- URL RES --
+
+Setup "nginx controller"
+git clone https://github.com/nginxinc/kubernetes-ingress.git
+https://www.youtube.com/watch?v=sHUSiM8jqbA
+https://medium.com/kokster/how-to-setup-nginx-ingress-controller-on-aws-clusters-7bd244278509
+https://github.com/nginxinc // How to setup with repo yaml files
+
+
+
+
+[ #CERT-MANAGER ]
+=================================/////=====================================================
+
+KNONW WORKING SOFTWARE STEPS FOR CERT-MANAGER
+---------------------------------------------
+https://github.com/jetstack/cert-manager/issues/1255
+
+			
+
+Cert-Manager v0.11.0
+
+NOTE: The v0.11 release is a significant milestone for the cert-manager project, and
+      is full of new features. We are making a number of changes to our CRDs in a backwards incompatible way,
+      in preparation for moving into v1beta1 and eventually v1 in the coming
+
+RES:  https://github.com/jetstack/cert-manager/releases/tag/v0.11.0 
+
+		
+		These are API Version Changes with v11
+
+Kind			Old apiVersion				New apiVersion
+Certificate		certmanager.k8s.io/v1alpha1		cert-manager.io/v1alpha2
+Issuer			certmanager.k8s.io/v1alpha1		cert-manager.io/v1alpha2
+ClusterIssuer		certmanager.k8s.io/v1alpha1		cert-manager.io/v1alpha2
+CertificateRequest	certmanager.k8s.io/v1alpha1		cert-manager.io/v1alpha2
+Order			certmanager.k8s.io/v1alpha1		acme.cert-manager.io/v1alpha2
+Challenge		certmanager.k8s.io/v1alpha1		acme.cert-manager.io/v1alpha2
+
+
+When you create a new ACME Issuer, cert-manager will generate a private key which is used 
+to identify you with the ACME server.
+
+After Let’s Encrypt gives your ACME client a token, your client will create a TXT record 
+derived from that token and your account key, and put that record at _acme-challenge.<YOUR_DOMAIN>. 
+Then Let’s Encrypt will query the DNS system for that record. If it finds a match, you can proceed 
+to issue a certificate!
+
+Note:
+cert-manager isn't trying to access letsencrypt.org, it is trying to access the domain for 
+the certificate being issued, to check that the challenge record is in place
+
+When the client requests a certificate, the CA asks the client to prove ownership 
+over the domain by adding a specific TXT record to its DNS zone. More specifically, 
+the CA sends a unique random token to the ACME client, and whoever has control over 
+the domain is expected to put this TXT record into its DNS zone, in the predefined 
+record named "_acme-challenge" under the actual domain the user is trying to prove ownership 
+of. As an example, if you were trying to validate the domain for *.eff.org, the validation 
+subdomain would be "_acme-challenge.eff.org." When the token value is added to the DNS zone, 
+the client tells the CA to proceed with validating the challenge, after which the CA will do 
+a DNS query towards the authoritative servers for the domain. If the authoritative DNS servers 
+reply with a DNS record that contains the correct challenge token, ownership over the domain is 
+proven and the certificate issuance process can continue.
+
+THIS IS THE KEY FOR DNS01 VALIDATION
+------------------------------------
+dns01 stanza, cert-manager will use the provider’s credentials from the referenced Issuer to 
+create a TXT record called _acme-challenge. This record will then be verified by the ACME server 
+in order to issue the certificate. Once domain ownership has been verified, any cert-manager 
+affected records will be cleaned up.
+
+acme-dns is a system to automatically manage TXT record values on behalf of your domain just for 
+challenge validation. This is probably the easiest method if you have a trusted acme-dns server 
+you can use, this also avoids storing powerful DNS admin credentials on your server.
+
+
+ACME 
+- A created ACME issuer - cert-manager will generate Private Key 
+  which is used to identify you with ACME server. 
+
+Solving Challenges
+- Certificate must be requested
+- ACME CA Server will verify client owns domain
+- The client must complete the challenge
+
+DNS01 Challenge
+- Need to provide a computed key that is prsent at a DNS TXT record.
+- Once there, ACME server retrieves KEY via DNS lookup and validate
+  client owns the domain for requested certificate. 
+
+  ** With Correct Perms, cert-manager will automate TXT record for
+     your given DNS Provider. 
+
+
+
+					-- INSTALL CERT-MANAGER --
+Create NameSpace ...
+$ kubectl create namespace cert-manager
+$ kubectl label namespace cert-manager cert-manager.io/disable-validation=true
+
+Install the CustomResourceDefinition resources separately
+$ kubectl apply --validate=false -f https://raw.githubusercontent.com/jetstack/cert-manager/release-0.11/deploy/manifests/00-crds.yaml
+
+Add the Jetstack Helm repository
+$ helm repo add jetstack https://charts.jetstack.io
+$ helm repo add stable https://kubernetes-charts.storage.googleapis.com/
+
+Update your local Helm chart repository cache
+$ helm repo update
+$ helm repo list
+
+helm install \
+  --name cert-manager \
+  --namespace kube-system \
+  --version v0.12.0 \
+  --set ingressShim.defaultACMEChallengeType=dns01 \
+  --set ingressShim.defaultACMEDNS01ChallengeProvider=route53 \
+  --set ingressShim.defaultIssuerName=letsencrypt-prod \
+  --set ingressShim.defaultIssuerKind=ClusterIssuer \
+  jetstack/cert-manager
+
+Once Installed - CHECK
+$ kubectl get all -n hello-world
+$ watch kubectl describe ing -n hello-world
+$ kubectl get Issuers,ClusterIssuers,Certificates,CertificateRequests,Orders,Challenges --all-namespaces
+
+
+Trouble Shoot Cluster ...
+https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/
+
+Trouble Shooting Steps:
+
+Create Issuer
+Create ingress
+Check the certificate >> Its status is Fasle
+Check the logs from nginx-ingress-controller >> It is throwing the below message
+Error getting SSL certificate "default/cloud-tls": local SSL certificate default/cloud-tls was not found. Using default certificate
+
+
+
+#CERTIFICATE TROUBLESHOOTING
+Hello everyone, almost always the issue is a configuration issue on your end and not 
+cert-manager, but cert-manager is horrible with error messages, the documentation probably 
+to blame and the authors assuming we know how it works.
+
+The way I solved this issue was realizing that errors don't only live in the cert, they 
+also live in all the sub objects and you should check each of them.
+
+For example, if you go to https://docs.cert-manager.io/en/latest/reference/certificates.html, 
+notice on the left menu there are:
+
+	Certificate
+	CertificateRequests
+	Orders
+	Challenge
+	etc.
+You can actually find error messages in each of these, like so:
+
+kubectl get certificaterequest -n hello-world
+kubectl describe certificaterequest -n hello-world
+kubectl get order -n hello-world
+kubectl describe order -n hello-world
+kubectl get challenge -n hello-world
+kubectl describe challenge -n hello-world
+
+kubectl get Issuers,ClusterIssuers,Certificates,CertificateRequests,Orders,Challenges --all-namespaces
+
+Note:
+cert-manager expected it to be in kube-system.
+
+Special Note:
+kubectl get ing -o yaml -n hello-world
+
+
+OFFICIAl kubenetes site:
+https://kubernetes.io/docs/concepts/services-networking/ingress/#types-of-ingress
+
+
+
+
+[ #ERROR ]
+=================================/////=====================================================
+
+[ ERROR -- You must be logged in to the server (Unauthorized) -- ERROR ]
+
+[ SOLUTION ]
+It would appear the aws-iam-authenticator is not picking up the 
+credentials properly from the path
+
+STEPS ...
+(1.)
+$ export AWS_ACCESS_KEY_ID=KEY
+$ export AWS_SECRET_ACCESS_KEY=SECRET-KEY
+$ aws-iam-authenticator token -i cluster-name
+
+(2.)
+Then pulling out the token and running
+aws-iam-authenticator verify -t k8s-aws-v1.really_long_token -i cluster-name
+
+
+[ ERROR -- incompatible versions client[v2.16.0] server[v2.15.0] -- ERROR ]
+
+[ SOLUTION ]
+Upgrade Tiller ...
+$ helm init --upgrade
+$ helm init
+$ helm ls
+
+
+[ When Using "eksclt" command -- Network Errors will occur when connecting to AWS if you don't upgrade ... ]
+
+[ SOLUTION ]
+Upgrade Bianry!
+URL RES: https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
+
+$ curl --silent --location "https://github.com/weaveworks/eksctl/releases/download/latest_release/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+$ sudo mv /tmp/eksctl /usr/local/bin
+$ eksctl version
+
+[ ERROR -- Unable to connect to the server: dial tcp 35.198.129.60:443: i/o timeout ]
+
+Probable Causes ...
+1.) Your Kubernetes cluster is not running. Verify that your cluster has been started, e.g. by pinging the IP address.
+2.) There are networking issues that prevent you from accessing the cluster. Verify that you can ping the IP and try to track down whether there is a firewall in place preventing the access
+3.) You have configured a cluster that does not exist any more.
+
+
+[ ERROR -- Failed to get D-Bus connection: Operation not permitted ]
+ISSUE: 
+services are started and stopped throught the systemd daemon. The systemctl command will simply try to 
+talk to the daemon by using a d-bus channel - and that's where the message comes from.
+
+SOLUTION:
+$ sudo docker run -d -it --privileged iwebapp_image /usr/sbin/init
+$ sudo docker ps a   #Get container id
+$ sudo docker exec -it <container_id> /bin/bash
+-- Should now be able to systemctl 
+
+[ ERROR -- AWS CLI InvalidSignatureException in a Docker container ]
+
+It seems that AWS requires the client’s system time to be closely in sync with the server side. 
+Only a small time difference of five minutes is allowed. My Docker daemon had not been restarted 
+for days and that have resulted in the stale system time in the container. That seems to be a 
+bug of the docker for mac beta:
+
+Version 1.12.0-rc4-beta19 (build: 10258)
+c84feba3aa680f426b8fa66f688388611267cd53
+
+URL Res -> https://ouyi.github.io/post/2016/07/19/aws-cli-invalid-signature-exception.html
+
+Solution:
+Restart local docker daemon
+
+
+[ ERROR -- NODEGROUP Work Nodes Off Line -- 0/3 nodes are available: 1 Insufficient pods, 2 node(s) had taints that the pod didn't tolerate. ]
+
+SOLUTION:
+https://docs.aws.amazon.com/eks/latest/userguide/migrate-stack.html
+(Just Migrate to a New Node Group / Delete the bad one)
+
+$ kubectl get events
+$ eksctl get nodegroups --cluster=stc --profile=stc-one-platform-dev
+$ <Run script that creates new nodegroup>
+$ eksctl delete nodegroup --cluster=<clust_name> --profile=<prof_name> --name=<bad_nodegroup>
+$ kubectl  get pods -o wide
+
+If that Doesn't work -- Trying scaling Node Group Down, then back up ...
+$ eksctl scale nodegroup --cluster=stc --profile=stc-one-platform-dev --nodes=1 --name=ng
+$ eksctl scale nodegroup --cluster=stc --profile=stc-one-platform-dev --nodes=3 --name=ng
+
+
+
+[ error"="Failed to determine Route 53 hosted zone ID: InvalidClientTokenId ]
+Solution: Look under ....
+https://docs.aws.amazon.com/STS/latest/APIReference/CommonErrors.html
+
+
+[ Error: could not find a ready tiller pod ]
+
+Do you see a tiller-deploy pod available there?
+kubectl -n kube-system get po
+
+Try deleting Deployment ...
+kubectl delete deployment tiller-deploy --namespace kube-system
+
+
+
+[ Node in "NotReady" State ]
+
+kubectl get nodes
+kubectl describe node <ip-xxxx.internal>
+-- Goto AWS and try to connect with one of the nodes via EC2 Instance Connect
+   * Check if "kublet" service is runnig
+   * free -m 
+   * df -h 
+   * tail -f /var/log/messages  // Is Kublet service in "Failed State"????
+
+
+
+
+
+
+
+[ #KUBE2IAM ]
+=================================/////=====================================================
+
+Perfect Arcticle
+https://medium.com/@marcincuber/amazon-eks-iam-roles-and-kube2iam-4ae5906318be
+
+The kube2iam server binds port 8181 on all IP addresses on the host. 
+This means that it can be reached from any IP address the host has:
+
+
+Philosophy ...
+
+Worker Nodes should have very few permissions, Should only assume a kube2iam role, which 
+then has permission to assume roles on a wildcard set of roles, scoped 
+by environment, e.g. dev-app-role-*
+
+You have to get those permissions off the nodes though ...
+
+
+Kube2iam brings the IAM-based approach from regular EC2 instances to the pod level. 
+The Ultimate goal here is to create IAM roles for your PODS.
+You'll create an assume role policy and attach it to the worker node role.
+This will allow worker nodes to assume role of pods which is a complete reversal of
+the pods inheriting role permissions from worker nodes. 
+
+Let's say Role-A is MAIN ROLE assigned to kubernetes Worker Nodes and Role-B is route53_dns01_validation_role.
+
+
+
+SET UP KUBE2IAM ....
+
+1.) Create Policy Adding Permissons For AWS STS To Assume Roles On Worker Node
+
+Step: 1a
+kube2iam-policy
+
+Step: 1b
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sts:AssumeRole"
+            ],
+            "Resource": "arn:aws:iam::640517671398:role/k8s-*"
+        }
+    ]
+}
+
+NOTE:
+-- Create roles that pods can assume
+-- They need to starting with k8s-.
+-- Notice the "*" wild card above
+
+2.) Attach "kube2iam-policy" to Worker Node's role: "NodeInstanceRole"
+
+
+SECOND PART ...
+Let use Kube2iam to give Cert-Manager pod access to Route53 to manage Records.
+
+
+3.) Create Policy -- Name it "k8s-route53-policy"
+
+
+Step: 3a (Just cut-n-paste item below)
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "route53:GetChange",
+            "Resource": "arn:aws:route53:::change/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "route53:ChangeResourceRecordSets",
+                "route53:ListResourceRecordSets"
+            ],
+            "Resource": "arn:aws:route53:::hostedzone/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "route53:ListHostedZonesByName",
+            "Resource": "*"
+        }
+    ]
+}
+
+Step: 3B (Create the Role -- Name it "k8s-dns01-validation")
+- Attach "k8s-route53-policy"
+
+
+Step: 3C (Edit Trust Reltionship on Role: "k8s-dns01-validation")
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::640517671398:role/eksctl-devops-nodegroup-ng-1-NodeInstanceRole-62NSM1D0PF0Z"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+
+
+NOTE:
+If everything works right you should get the following ...
+
+$ curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
+kube2iam
+
+
+           
+(2.) Install kube2iam
+helm install --name kube2iam --namespace kube-system -f ./kube2iam.config.yaml stable/kube2iam
+
+(3.) Annotate your pod deployments
+
+
+RELATED RESOURCE ...
+--------------------
+DNS CHALLENGE EXPLAINED
+https://letsencrypt.org/docs/challenge-types/#dns-01-challenge
+
+NOTE:
+We need to have CertManager to ...
+
+Use the provider’s credentials from the referenced Issuer to create a TXT record called _acme-challenge. 
+This record will then be verified by the ACME server in order to issue the certificate.
+
+NOTE:
+Create Role, attach policy CertManager-DNS01-Validation
+
+
+
+
+
+
+--- COMMANDS ---
+
+Get all logs of pods
+kubectl logs -n kube-system -l app.kubernetes.io/name=kube2iam --all-containers=true
+
+Get Pod Deployment
+kubectl get deployments -o yaml --all-namespaces 
+
+Get Secrets
+kubectl get secret <secret_name> -o yaml
+
+k get service -n hello-world app2-service -o yaml
+
+
+
+
+
+
+					[ #EXTERNAL-DNS ]
+=================================/////=====================================================
+
+Setup External DNS
+
+https://docs.syseleven.de/metakube/de/tutorials/use-external-dns	// Navigate to AWS section of article
+Install vid (Definitely look at this one):
+https://www.youtube.com/watch?v=9HQ2XgL9YVI
+
+Github:
+https://github.com/kubernetes-sigs/external-dns/blob/master/README.md
+
+# NOTE: ANNOTATIONs
+# external-dns.alpha.kubernetes.io/target: <elb fqdn> annotation ...
+#
+# Implementing the above annotation in ingress forces external-dns to create this pointer ...
+# keycloak.hostk8s2.com 0 IN CNAME a363d93d147e511eaba7d06eba2d231a-1546000775.us-east-2.elb.amazonaws.com
+# 
+# This essentially creates a CNAME record for your host with the value of the ELB hostname. 
+
+
+
+
+
+Applications that exposes a public endpoint - providing a reachable service.
+Channel between Client & Server must be secure TLS(Transport Layer Security) protocol
+
+The setup:
+  Private Key and Server Certificate containing the Public Key are required. 
+  	We want the Commercial Certificate from LetsEncrypt ...
+
+  Setting up TLS on PublicEndpoint:
+        NOTE: Common name of Server Certificate must match URL of PublicEndpoint
+              otherwise client won't trust service they connect to. 
+              
+              1.) 
+
+
+Kubernetes In The Cloud or EKS
+------------------------------
+- Public Endpoints are exposed via Load Balancer assigned with Public IP 
+  A LoadBalancer service is the standard way to expose a service to the internet.
+  and generated DNS name. This is a URL pointing to Kubernetes service of LoadBalancer
+  type. 
+
+What we need ...
+
+
+Now Enters: Kubernetes External DNS
+-----------------------------------
+1.) 
+Allows publishing of PublicEndpoints on predefined URLS,
+for which the TLS server certificates can be provisioned up front. 
+
+2.)
+Dynamically sets up DNS records at DNS providers(Route53) - Doing all this while being
+external to Kubernetes
+
+
+
+
+
+
+
+
+
+
+
+
+
+					[ #SECRET ]
+=================================/////=====================================================
+
+
+
+#DOCKER CREDS
+===================
+STC Dockerhub Registry
+username: devopsserviceaccount
+pw:	  G7VuD^us123
+===================
+# process json files 
+    sed -i"" -e "s|<VOMS_URL>|${VOMS_HOST}|g" "${VOMS_PROCESS_JSON}"; \
+    sed -i"" -e "s|<KEYCLOAK_URL_WITH_REALM>|${KC_URL_SAML}|g" "${VOMS_PROCESS_JSON}"; \
+    sed -i"" -e "s|<VOMS_URL>|${VOM_HOST}|g" "${VOMS_APPS_JSON}"; \
+
+ENV KC_ENDPOINT https://keycloak-sndbx001.hostk8s2.com/sso
+ENV VOMS_HOST vomsapp-devops.hostk8s2.com
+ENV KC_URL_SAML="${KC_ENDPOINT}/protocol/saml"
+
+
+
+Useful Resource: 
+https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+
+1.) 
+kubectl create secret docker-registry regcred --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword>
+2.)
+kubectl get secret regcred --output=yaml
+3.) Use the format below. The output will be the .dockerconfigjson ... you'll the output yaml on that line. 
+
+4.) 
+Include this in your deployment.yaml -- Allows you to pull image from docker hub with creds. 
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vomsapp-reg-key
+  namespace: vomsapp
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJodHRwczovL2luZGV4LmRvY2tlci5pby92MS8iOnsidXNlcm5hbWUiOiJkZXZvcHNzZXJ2aWNlYWNjb3VudCIsInBhc3N3b3JkIjoiRzdWdURedXMxMjMiLCJhdXRoIjoiWkdWMmIzQnpjMlZ5ZG1salpXRmpZMjkxYm5RNlJ6ZFdkVVJlZFhNeE1qTT0ifX19
+type: kubernetes.io/dockerconfigjson
+
+
+
+
+
+
+
+GOOD SECRET REF!!!!
+https://medium.com/platformer-blog/using-kubernetes-secrets-5e7530e0378a
+
+
+						[ PULL IMAGE FROM Private Reg ]
+
+1.) Create Secret from CLI ...
+
+$ kubectl create secret docker-registry <Secret_Name> --docker-server=https://index.docker.io/v1/ \
+--docker-username=<Docker Username> --docker-password=<Docker Password> --namespace <Name_Space>
+
+kubectl get secret regcred --output=yaml
+
+
+
+secret_name: nginx-reg-key
+
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: devopsserviceaccount/keycloak-base:keycloak-app.0.0.1
+        ports:
+        - containerPort: 8080
+      imagePullSecrets:
+      - name: keycloak-reg-key		// <Secret_Name>
+
+
+
+						[ Create Secret Access Key ]
+
+Note: This worked when I put the secret In "cert-manager" namespace.
+       CM was complaining that it couldn't find the secret. 
+
+Another way to do it ...
+kubectl --namespace cert-manager create secret generic iam-creds --from-literal="secret-access-key=$aws_secret"
+
+
+1.)
+echo -n 'l1r4rqSiwaM2IiPW1F3zNpK5YbU9h3wX7VqBr7iI' | base64
+
+2.)
+kubectl create secret generic <secret_name> \
+--from-literal=secret-access-key='bDFyNHJxU2l3YU0ySWlQVzFGM3pOcEs1WWJVOWgzd1g3VnFCcjdpSQo=' --namespace cert-manager
+
+
+
+3.) Create Secret 
+apiVersion: v1
+kind: Secret
+metadata:
+  name: route53-creds
+  namespace: cert-manager
+type: Opaque
+data:
+  secret-access-key: bDFyNHJxU2l3YU0ySWlQVzFGM3pOcEs1WWJVOWgzd1g3VnFCcjdpSQ==
+
+
+Get opposite encoding -- optional
+echo 'MWYyZDFlMmU2N2Rm' | base64 --decode
+
+
+
+
+					[ #EXEC ]
+SHELL INTO A Kubernetes CONTAINER
+=================================/////=====================================================
+
+example:
+k exec -it <container_name> -n hello-world -- /bin/bash
+or
+k exec -it <container_name> -- bash
+
+#INTERACTIVE POD FOR TESTING
+              <name>                 <Image-from-dhub>                    <prefered shell>
+
+$ kubectl run mysql -i --tty --image=mysql/mysql-server --restart=Never -- bash			// Mysql Image
+
+Steps to initial DB:
+$ vi my.cnf   -->  bind-address = 0.0.0.0
+$ rm -rf /var/lib/mysql/*
+$ mysqld --initialize --user=mysql --datadir=/var/lib/mysql
+$ mysqld &    // Start the Database
+
+$ mysql -u root -p
+mysql> alter user root@localhost identified by 'abc123';
+
+$ kubectl run cent-server -i --tty --image=centos:7 --restart=Never --namespace foo -- bash	// CentOS Image
+
+-- centos:7
+yum install net-tools bind-utils nmap-ncat.x86_64 telnet telnet-server nmap vi -y
+
+=================================/////=====================================================
+
+
+
+ROUTE DOMAIN TRAFFIC TO ELB LOAD BALANCER
+---------------------------------------------
+RES:
+https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-to-elb-load-balancer.html
+
+To route domain traffic to an ELB load balancer, 
+use Amazon Route 53 to create an alias record that points to your load balancer. 
+
+TS -- ELB
+
+nc -zv <ip_of_elb> port#
+dig @<aws_name_server> <aws_domain> <record_type>   // dig @ns-304.awsdns-38.com appone.hostk8s2.com A
+
+
+
+
+KNONW WORKING SOFTWARE STEPS FOR CERT-MANAGER
+----------------------------------------------------
+https://github.com/jetstack/cert-manager/issues/1255
+
+
+
+#ISSUER
+#CLUSTERISSUER
+---------------
+
+k get clusterissuers.cert-manager.io 
+kd clusterissuers.cert-manager.io <ci_name>
+
+
+#DNS TROUBLE SHOOTING
+------------------------------------
+Get Name Server of Registered Domain
+nslookup -type=ns hostk8s2.com
+
+
+
+
+DevOps Skill Set
+////////////////
+
+- Res: https://squadex.com/insights/devops-skills-success/
+- DevOps helps develop and release software more rapidly
+
+Source Control		CI/CD		Config Mgmnt		Auto Deploy		Containers		Orchestrations		Cloud Plat
+
+Git			Jenkins		Ansible			Jenkins			Docker			Kubernetes		AWS
+Bitbucket
+
+Software Security Skills
+DevSecOps
+
+Coding Skills
+-------------
+Bash, (Earn Solid Salary -- Python, JavaScript), Terraform, Packer, GO($135k)
+Restful API
+
+
+
+Difference between POD and Deployment:
+#DIFFERENCE
+--------------------------------------
+
+Both Pod and Deployment are full-fledged objects in the Kubernetes API.
+It is rather unlikely that you will ever need to create Pods directly for 
+a production use-case.
+
+POD:
+----
+Is a collection of containers/Pods that lie on the same node.
+
+- Not suitable for production
+- No rolling updates
+- Deployment is a kind of controller in Kubernetes.
+
+Note:
+Controllers use a Pod Template that you provide to create the Pods 
+for which it is responsible.
+
+DEPLOYMENT:
+-----------
+Creates a ReplicaSet which in turn make sure that, CurrentReplicas is 
+always same as desiredReplicas .
+
+Advantages:
+-----------
+You can rollout and rollback your changes using deployment
+Monitors the state of each pod
+Best suitable for production
+Supports rolling updates
+
+Services - sets up networking in a Kubernetes cluster
+
+
+
+#NGINX-INGRESS
+-------------
+An ingress controller is responsible for reading the ingress resource information 
+and processing it appropriately.
+
+SETUP NGINX-INGRESS
+Res: https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nginx-ingress-with-cert-manager-on-digitalocean-kubernetes
+
+
+
+#GIT
+ERROR:
+Git complained of a large file which was nologner there. 
+It wouldn't let me push new updates.
+
+Any files over 100MB in size (that aren't in your latest commit) will be 
+removed from your Git repository's history. You can then use git gc to clean 
+away the dead data:
+
+$ git gc --prune=now --aggressive
+
+
+#INGRESS
+---------
+#### Note:
+# Creating nginx ingress ELB and setting up routing in Ingress, etc. etc. etc. won’t route traffic to your app
+# you do need the CNAME record for your app.hostk8s2.com host to have the value of the ELB hostname
+
+
+#DOCKER
+-------
+
+
+
+
+The Container model right now is to just start your application directly AS THE SINGLE PROCESS in the container. 
+This approach has its flaws, but also seems to be the current main thinking of containerization efforts.
+
+[ #DOCKER-COMPOSE ] 
+
+ref: https://www.youtube.com/watch?v=ARuyau0_j28
+
+Article For Compose On kubernetes Controller
+https://www.docker.com/blog/simplifying-kubernetes-with-docker-compose-and-friends/
+
+- Docker Compose works w/ Kubernetes
+- It's "Stack Object" makes it possible to create a development loop into kubernetes.
+  In essence ... When an Docker App is updated - the image gets repurposed Automatically and the and
+  the container get redeployed reflecting the changes. 
+
+
+ERRORS
+--------------------
+env: 'python': No such file or directory
+
+
+Problem scenario
+You try to run an AWS CLI command but you receive this error:
+/usr/bin/env: ‘python’: No such file or directory
+
+What should you do?
+
+Possible Solution #1
+If Python 3 is not installed, install it.
+
+Possible Solution #2
+If Python 3 has been installed, run these commands:
+whereis python3
+
+
+AWS CRED VARIABLES ...
+----------------------
+AWS_SECRET_ACCESS_KEY=$(aws --profile stc-one-platform-dev configure get aws_secret_access_key)
+AWS_ACCESS_KEY_ID=$(aws --profile stc-one-platform-dev configure get aws_access_key_id)
+
+docker build -t keycloak --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY .
+
+docker build -t keycloak .	////	to build a container
+docker exec -it <container name> /bin/bash 	////	to get a bash shell in the container.
+
+postgresql-server.x86_64
+postgresql-contrib.x86_64
+
+postgresql94-contrib-debuginfo.x86_64
+
+
+
+Nginx-ingress + Cert-manager were good all along.
+
+The most highly paid skills were related to deploying and managing the BUILD BLOCKS OF BIG DATA STORAGE
+AND ANALYTICS-- such as the Data-Streaming platform APACHE Kafka, cloud-based noSQL relational 
+database Amazon DynamoDB and the cloud-based data warehouse Amazon Redshift.
+- Apache Kafka
+- No-Sql Amazon DynamoDB, MongoDB
+- GoLang, Bash, Python
+- Data Warehouse Amazon Redshift.
+- Lambda principles - learn it. 
+
+RES: Cool Article
+https://www.techrepublic.com/article/the-programming-languages-and-skills-that-pay-the-best-in-2019/
+
+
+
+
+
+
+A port is just a magic number. It doesn't correspond to a piece of hardware. The server opens a socket that 'listens' at port 
+80 and 'accepts' new connections from that socket. Each new connection is represented by a new socket whose local port is also 
+port 80, but whose remote ip:port is as per the client who connected.
+So they don't get mixed up. You therefore don't need multiple IP addresses or even multiple ports at the server end.
+
+Say a server at 10.10.100.100 listens to port 80 for incoming TCP connections (HTTP is built over TCP). A client's 
+browser (at 10.9.8.7) connects to the server using the client port 27143. The server sees: "the client 10.9.8.7:27143 
+wants to connect, do you accept?". The server app accepts, and is given a "handle" (a socket) to manage all communication 
+with this client, and the handle will always send packets to 10.9.8.7:27143 with the proper TCP headers.
+
+
+
+
+
+TAR
+----------------
+
+A better way
+The flag that I have learned is the strip flag. This will strip off the first directory and extract the rest.
+
+tar -xvf ZendFramework-1.7.2.tar.gz --strip 1
+
+https://nexus.stchealthops.com/repository/raw-hosted/keycloak/3.1.0/noarch/keycloak-3.1.0.Final.tar.gz
+
+
+HTTP ERRORS
+---------------
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+
+
+[ #KEYCLOAK ]
+HELM & RDS (Connect EXT RDS to Helm Chart Keycloak)
+---------------------------------------------------
+URL RES: 
+https://github.com/reportportal/kubernetes/blob/master/reportportal/v5/README.md#6-postgresql-installation
+http://fruzenshtein.com/eks-kubernetes-aws-connect-rds/
+
+NOTEs:
+This shows Keycloak yaml file ...
+https://github.com/devsu/docker-keycloak/blob/master/server-ha-mysql/kubernetes-example.yml
+and
+Keycloak Docker File old version, but this should get you going.
+https://github.com/solsson/keycloak-ha-kubernetes/blob/keycloak-ha-kubernetes-example/server/Dockerfile
+
+FIND JAVA's Correct Path
+https://www.liquidweb.com/kb/install-java-8-on-centos-7/
+
+Intall Native Tomcat
+https://qiita.com/tkprof/items/aa9c01bb848af8aff68c
+
+cd /opt/tomcat/bin/tomcat-native-1.2.23-src/native
+
+
+
+
+To secure the APP ... 
+web.xml ???
+
+So ...
+- When you try to access App URL 
+- You have to be authenticated
+- You to have the role "user"
+
+Application doesn't know where Keycloak server is running ... That's why it needs ...
+-- keycloak.json file 
+Inside ...
+{
+	"realm": "test-realm"     				// Signifies which realm you want to protext ...
+	"realm-public-key": "Long-public-line-here"
+        "bearer-only": true  				      	// This App can only be access by other Apps that already have a token
+	"auth-server-url": "http://localhost:8080/auth",  	// 
+	"ssl-required": "none",
+	"resource": "product-portal",
+	"public-client": true
+}
+
+How to enter Keycloak:
+- JSON WEB TOKEN (Payload consist of: Who you are / where you are / when will token expire)
+
+What we want. 
+1.) Login to App
+2.) Redirected to Keycloak for Auth
+3.) Keycload redirect back to Application w/ Access
+
+
+
+#KEYCLOAK
+
+			CONFIGURE KEYCLOAK
+  			------------------
+
+MASTER
+
+Configer -- Click TO Create New Realm
+Name* 	<Realm_NAme>
+CREATE
+
+
+
+			Realm - Setting
+Login
+-- User registration ON    		//   Register to become new user
+-- Forgot password ON      		//   keycloak sends email with password
+-- Remember Me ON    			//   Don't want to login all over again
+SAVE IT ...
+
+			Clients		// Any App that you will secure.
+
+-- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+Bitbucket
+------------------
+ 
+Login
+Join/Create Team
+Create Project (Organizational Folder for your repos)
+Create Repo / README.md, .gitignore
+Create .circle/config.yaml
+  -- Add file --> Type in ".circle/config.yaml
+  -- Commit changes
+
+Webhook 
+	--> Title: CircleCI Webhook
+        --> https://circleci.com/hooks/bitbucket
+
+Triggers 
+        --> Push, Merge
+
+
+CircleCI
+-------------
+
+# Indicates version of Circle platform
+version: 2
+
+# Collection of arbitrary children
+jobs:
+
+# "build" is first name child in "jobs:"
+  build:
+  
+# "docker" is the executor which defines environment. 
+# Also where all steps occur ...
+
+
+    docker:
+
+# This custom image is used to start a virtual computing environment.
+# just do $ docker search <image_name> to find the image you want to use.
+# Can also find tag number from ...
+# https://circleci.com/docs/2.0/circleci-images/?gclid=EAIaIQobChMIrP6byJ_j5wIVE9RkCh1cjgMDEAAYASAAEgIQpPD_BwE#examples
+      - image: alpine:3.7
+      
+    steps:
+    
+# "checkout pulls down your code and clones it to the virtual computing 
+# environment started by the "Custom Image: alpine:3.7"
+      - checkout
+
+# So then "run" with "name" of command process executes commands. 
+      - run:
+          name: The Code Has Arrived!
+
+# "command with "|" means to run more than one command in 
+# the same shell.
+          command: |
+             ls -al
+             echo "This should look familiar"
+              
+
+setup_remote_docker
+Creates a remote Docker environment configured to execute Docker commands.
+
+example:
+steps:
+      - setup_remote_docker
+
+
+#NETWORKING
+
+The applications in a pod all use the same network namespace (same IP and port space), 
+and can thus “find” each other and communicate using localhost. Because of this, applications 
+in a pod must coordinate their usage of ports. Each pod has an IP address in a flat shared 
+networking space that has full communication with other physical computers and pods across 
+the network.
+
+
+
+
+
+
+Quick N Dirty JOB
+-----------------
+
+version: 2
+jobs:
+  build:
+    docker:
+      - image: ubuntu:18.04
+    steps:
+      - checkout
+      - run: echo "A first hello"
+      - run:
+          name: Add apt repo for ffmpeg
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+      - run: ffmpeg -h
+
+      - run: sh -c 'groupadd --gid 3434 circleci'
+      - run: sh -c 'useradd --uid 3434 --gid circleci --shell /bin/bash --create-home circleci'
+      - run: sh -c 'echo "circleci ALL=NOPASSWD: ALL" >> /etc/sudoers.d/50-circleci'
+      - run: sh -c 'echo "Defaults    env_keep += 'noninteractive'" >> /etc/sudoers.d/env_keep'
+
+                
+                           
+                
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.6.1
+      - image: circleci/postgres:9.4
+    environment:
+      IMAGE_NAME: devopsserviceaccount/keycloak-base
+    steps:
+      - setup_remote_docker
+      - checkout
+      - run:
+          name: Build docker image
+          command: docker build -t $IMAGE_NAME:`python setup.py --version` --build-arg host_ip="$HOST_IP" --build-arg host_url="$HOST_URL" .
+      - run:
+          name: Push to dockerhub
+          command: |
+            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin
+            docker push $IMAGE_NAME:`python setup.py --version`
+      - run:
+          name: Create new 'latest' alias
+          command: |
+            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USER" --password-stdin
+            docker tag $IMAGE_NAME:`python setup.py --version` $IMAGE_NAME:latest
+            docker push $IMAGE_NAME:latest
+  ssh-deploy:
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    steps:
+      - setup_remote_docker
+      - checkout
+      - run:
+          name: Send SSH deploy commands to test server
+          command: |
+            cat scripts/docker_ssh_deploy.sh | ssh -o "StrictHostKeyChecking no" $SSH_USER@$SSH_HOST
+  kubernetes-deploy:
+    docker:
+        - image: stcone/kubernetes
+          auth:
+            username: $DOCKERHUB_USER
+            password: $DOCKERHUB_PASSWORD
+    steps:
+      - setup_remote_docker
+      - checkout
+      - run:
+         name: Instruct the Kubernetes server to redeploy
+         command: kubectl apply -f kubernetes/deploy.yaml
+
+  kubernetes-rolling-update:
+    docker:
+        - image: stcone/kubernetes
+          auth:
+              username: $DOCKERHUB_USER
+              password: $DOCKERHUB_PASSWORD
+    steps:
+      - setup_remote_docker
+      - checkout
+      - run:
+          name: Perform a rolling update on the deplyoment to refresh the docker image
+          command: kubectl rollout restart deployments/$DEPLOYMENT --namespace=$NAMESPACE
+workflows:
+  version: 2
+  buildy-mcbuildface:
+    jobs:
+      - publish:
+          context: Docker
+          requires:
+          filters:
+            branches:
+              only: master
+      - kubernetes-deploy:
+          requires:
+            - publish
+          filters:
+            branches:
+              only: master
+      - kubernetes-rolling-update:
+          requires:
+           - kubernetes-deploy
+          filters:
+            branches:
+              only: master
+
+
+
+
+WINDOWS
+-----------------
+
+Destroy all data on hard drive
+
+1.) Open cmd w/ Admin privs
+2.) rd C:\ /s /q
+
+This will annialate the folders on the entire hard drive
+OS is gone!!!!
+
+AWS Solutions Architect From $100k -- $200k
+REQ:
+Requirements
+• Extensive hands on AWS experience in a PaaS environment.
+• Knowledge of AWS services including EC2, Route 53, VPC, IAM, S3, ECS, Aurora and Elastic Beanstalk
+• Savvy skills with PHP/Nginx/Angular/MongoDB/RabbitMQ, Java, .Net
+• Knowledge of high-level programming languages like Python
+• Knowledge of Kubernetes or Docker for automating application, deployment, scaling and management.
+• Extensive DevOps skills with tools such as Ansible for open-source software provisioning and configuration management.
+• Ability to work with various operating systems including Windows, RedHat Linux, Debian, MacOs
+
+
+
+
+[ #PHCAPP ]
+(JDK SETUP and ln -s path)
+https://unix.stackexchange.com/questions/199166/how-to-install-jar-command-in-elementary-os
+
+TOMCAT DOWNLOAD
+https://tomcat.apache.org/
+
+Get oracle client & sqlplus
+https://www.oracle.com/in/database/technologies/instant-client/linux-x86-64-downloads.html
+client:
+https://www.oracle.com/in/database/technologies/instant-client/linux-x86-64-downloads.html#license-lightbox
+
+#LIST EKS CLUSTER
+eksctl get clusters
+aws eks list-clusters
+
+#VERSION KUBERNETES CLUSTER
+kubectl version --short
+
+#VERSION KUBERNETES WORKER NODE
+kubectl get node -o custom-columns=NAME:.metadata.name,VERSION:.status.nodeInfo.kubeletVersion
+
+
+TROUBLE SHOOT KUBERNETES AND WORKER NODES
+https://aws.amazon.com/premiumsupport/knowledge-center/eks-pod-status-troubleshooting/
+
+
+#HELM
+
+HEM HUB
+-------
+https://hub.helm.sh/		//    This is a site of App Charts ready to download apply
+
+
+
+INSTALLING HELM
+(Architecture, Diagrams and Instructions)
+https://devopscube.com/install-configure-helm-kubernetes/
+
+-- Delete chart and release
+$ helm delete <chart_name> --purge
+
+-- See name of releases installed
+$ helm list or helm ls
+$ helm list -aq
+
+FORCE DELETE HELM CHART
+-----------------------
+$ helm delete --purge --no-hooks <release_name>
+
+
+PLEASE REVIEW AN SORT
+===============================================================================================================================================================
+
+#TEST DOMAIN ACCESS
+============================
+https://www.tecmint.com/linux-host-command-examples-for-querying-dns-lookups/
+wget --save-headers -O-  http://app2.hostk8s.com  // Errors implies that HTTPS is successful been enabled
+                                                     but the certificate cannot be verified for fake certificate.
+                                                     If it succeeds then HTTP is NOT successful. 
+
+curl -v http://apptwo.hostk8s.com
+
+
+
+DNS PROPAGATION CHECK
+-----------------------
+https://www.whatsmydns.net/
+
+
+
+DOCKER PUSH NEW IMAGE
+docker tag keycloak2 devopsserviceaccount/keycloak-base:keycloak-v9.0.0  //  Note. provide Tag Name located in Local Repo. 
+docker push devopsserviceaccount/keycloak-base:keycloak-v9.0.0           //  Note. keycloak-v9.0.0 This can be any name you want. 
+
+Tag Image, Push To Docker Hub
+---------------------------------
+$ docker tag <image_name>:latest mrdnewman/myhub-demo:<image_name>
+$ docker push mrdnewman/myhub-demo:<image_name>
+
+Example:
+docker tag vomsapp:01 stcone/vomsapp:latest
+	note: tag <existing_image_name>
+
+
+
+[ #DOCKER ]
+=================================/////=====================================================
+
+REMOVE ALL IMAGES ...
+---------------------
+$ docker rmi $(docker images -a -q)
+
+REMOVE ALL CONTAINER ...
+------------------------
+$ sudo docker rm $(docker ps -a -q)
+
+DOCKER RUN
+------------------
+sudo docker run -d -it --privileged iwebapp_image /usr/sbin/init
+docker run -p "8080:8080" -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=pass jboss/keycloak-test 
+
+DOCKER VARIABLES ...
+--------------------
+ARG 
+You use ARG for settings that are only relevant when the image is being 
+built, and aren't needed by containers which you run from the image. 
+
+ENV 
+ENV for evnvironment variables to use during the build and in 
+containers.
+
+DOCKER CHEAT SHEET ...
+----------------------
+https://kapeli.com/cheat_sheets/Dockerfile.docset/Contents/Resources/Documents/index
+
+
+Pull Docker Image from Remote Repo Try to run but not found.
+-- Note:
+        Try retagging the image then running it.
+        $ docker commit <container_id> <repo_name>   /// i.e, $ docker commit 123456789 jboss/keycloak
+
+Container Keeps Crashing - Investigate by doing this ...     ///   (https://vsupalov.com/debug-docker-container/)
+	$ docker run -it --entrypoint /bin/bash $IMAGE_NAME -s
+
+Note:
+	The –entrypoint parameter makes the container execute /bin/bash, which 
+	gets “-s” as CMD, overwriting anything the image might otherwise insist on.
+	-- Happy Invetigating --
+
+
+=================================/////=====================================================
+
+
+
+Create Kubernetes Users Access -- CLI
+--------------------------------------
+https://helm.sh/docs/rbac/#role-based-access-control
+https://kubernetes.io/docs/reference/access-authn-authz/authentication/#authentication-strategies
+
+EKS ROlES LEVELS
+----------------
+https://kubernetes.io/docs/reference/access-authn-authz/rbac/#user-facing-roles
+
+cluster-admin role = super-user role for cluster can do anything to cluster
+admin role = Used to mange a single namespace within cluster.
+edit and view roles = are default roles
+##############
+
+List Cluster Roles
+-------------------
+$ kubectl get clusterroles
+
+
+
+ROLE & ROLE BINDING
+--------------------
+Like O'Reilly's Explanation ...
+https://www.oreilly.com/library/view/kubernetes-security/9781492039075/ch04.html
+
+User facing role ...
+      cluster-admin, admin (for namespaces)
+
+
+UPDATE AWS-AUTH
+-----------------
+https://stackoverflow.com/questions/50791303/kubectl-error-you-must-be-logged-in-to-the-server-unauthorized-when-accessing?rq=1
+$ kubectl edit -n kube-system configmap/aws-auth
+
+
+
+
+EKS WORKSHOP ...
+----------------
+https://eksworkshop.com/intro_to_rbac	///  Role, Role Binding
+
+
+
+
+
+AWS DELETE SECRETS PERM
+========================
+
+$ aws secretsmanager delete-secret --region us-east-2 --secret-id \
+  remove-this-secret --force-delete-without-recovery --profile stc-one-platform-dev
+
+
+Setting up Amazon EKS: What you must know
+-----------------------------------------
+https://medium.com/@dmaas/setting-up-amazon-eks-what-you-must-know-9b9c39627fbc
+Intro Kubernettes
+https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/
+
+
+
+[ #DASHBOARD SETUP ]
+=================================/////=====================================================
+
+AWS Dashboard Setup - Pretty good.
+https://aws.amazon.com/premiumsupport/knowledge-center/eks-cluster-kubernetes-dashboard/
+
+
+\\\ Dashboard Doc: \\\
+https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/
+
+
+1.) Deploy Dashboard UI
+k apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta8/aio/deploy/recommended.yaml
+
+2.) Create Svc Account // Cluster Role Binding
+k apply -f dashboard_svc-acct.yaml
+
+
+-----------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+---------------------------------------
+
+
+3.)
+-- Get Dashboard Token 
+aws eks get-token --cluster-name sndbx001 | jq -r '.status.token'
+
+
+-- REVERSE --
+Delete Svc Account 
+Delete Dashboard
+
+=================================/////=====================================================
+
+
+
+
+
+https://docs.aws.amazon.com/eks/latest/userguide/dashboard-tutorial.html
+Trouble Shooting Dashboard ...
+https://github.com/kubernetes/dashboard/wiki/Creating-sample-user
+CHECK ROLE PERMISSIONS
+$ kubectl -n kube-system describe rolebinding kubernetes-dashboard-minimal
+PROBLEM WITH CONSOLE / ROLE RUN ...
+$ kubectl create clusterrolebinding kubernetes-dashboard --clusterrole=cluster-admin --serviceaccount=kube-system:kubernetes-dashboard
+
+Jasper Reports Server -- Docker
+https://medium.com/@sewwandikaus.13/deploying-jasper-reporting-server-on-docker-fe9581757178
+CHEAT SHEETS:
+Which Kubernetes apiVersion Should I Use?
+https://matthewpalmer.net/kubernetes-app-developer/articles/kubernetes-apiversion-definition-guide.html
+
+What is a Namespace?
+You can think of a Namespace as a virtual cluster inside your Kubernetes cluster. You can have multiple 
+namespaces inside a single Kubernetes cluster, and they are all logically isolated from each other. They 
+can help you and your teams with organization, security, and even performance!
+
+
+[ #KUBERNETES YAML ]
+=================================/////=====================================================
+https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.10/#deployment-v1-apps
+resource: https://www.mirantis.com/blog/introduction-to-yaml-creating-a-kubernetes-deployment/
+
+=================================/////=====================================================
+
+
+
+
+#S3 BUCKET
+------------------
+
+-- List contents of a bucket
+aws s3 ls s3://stc-packerbuild-bucket/iq-afix-voms/applicationComponents/VOMS/APP/ --profile stchome
+
+Profile: stchome
+
+aws secret access key:
+w7jT64KUjEeBPuKy4rtBHZPmeVMBgJO7YDxVKW9P
+
+access key id:
+AKIAZEDIS7Q2GJ4KRAXD
+
+
+------------------------------------
+URL_RES: https://stackoverflow.com/questions/25775266/how-to-keep-docker-container-running-after-starting-services
+
+# DOCKER - ENTRYPOINT / CMD
+The reason it exits is because the shell script is run first as PID 
+1 and when that's complete, PID 1 is gone, and docker only runs while PID 1 is.
+
+You can use supervisor to do everything, if run with the "-n" flag it's told 
+not to daemonize, so it will stay as the first process:
+
+CMD ["/usr/bin/supervisord", "-n"]
+
+
+#NODE USER #NPM #NVM
+--------------------------
+
+
+Can run a Thousands Instances of Same Application w/ single command
+$ kubectl run --replicas=1000 <app_name>
+
+Scale up to even more ...
+$ kubectl scale --replicas=2000 <app_name>
+
+Upgrade instances
+$ kubectl rolling-update --image=<ap_name>:02
+
+Rollback Image if Needed ...
+$ kubectl rolling-update <app_name> --rollback
+
+
+
+
+Get all the events
+k get events 
+
+
+# NAMESPACEs       YAML DECLARATION (Use thsi verbage)
+---------------------------------------
+
+What's are namespaces?
+Isolated, Virtual, mini Clusters inside the main cluster
+
+Note:
+Kubernetes ships with 3 Namespaces:
+
+- default        Catchall Namespace for objects other than kube-system and kube-public object.
+                 Furthermore:
+                        Kubernetes tooling is setup to use this namespace out of the.
+                        other than that - nothing really specail about it. 
+
+- Kube-system 	 A Namespace for objects created by the Kubernetes system objects such as:
+
+                 	* kube-dns
+                  	* kube-proxy
+                  	* kubernetes-dashboard 
+                  	* fluentd
+                  	* heapster
+                  	* ingresses
+                 	* Kubernetes-dashborad
+
+- kube-public 	Not used for anything really.
+
+
+<<<>>>
+
+(Vid Res) https://youtu.be/xpnZX3if9Tc
+[ #CROSS Namespace Commnunication ]
+=================================/////=====================================================
+
+
+
+Provision AWS Services through Kubernetes
+https://aws.amazon.com/blogs/opensource/provision-aws-services-kubernetes-aws-service-broker/
+
+AWS Service Broker, an implementation of the OSB API 
+that will allow you to provision AWS services like RDS and EMR directly through any platform supporting 
+the OSB API. Currently, that list includes Kubernetes, OpenShift, and Cloud Foundry.
+
+
+
+This give you the IDEA how to setup Keycloak
+https://medium.com/@agusnavce/authentication-is-hard-keycloak-to-the-rescue-32ca4b442a13
+
+KEYCLOAK CERT-MANAGER ISSUE ... Definitely Relevant
+https://github.com/bitnami/kube-prod-runtime/issues/532
+
+T.S. Steps:
+
+$ k get ing
+$ k get certificates
+
+$ curl -vkI https://vomsapp-sndbx001.hostk8s2.com/
+  
+  - Check "issuer" ... If it mentions Fake Certificate 
+
+1.) Try Deleting Certificate Secret
+$ k delete secret vomsapp-production-cert
+   
+  - Should prompt cert-manager to re-queue a new request -- PROD this time
+     If it doesn't work
+
+2.) Delete Container, rename app with an increment or lable of -01, 02 or 03 etc
+    Then apply container again. 
+
+WHAT's THE PROBLEM:
+Initially Cluster issuer was set to lets-encrypt-staging and Cert-manger doesn't 
+Doesn't renew this automatically.
+
+
+NOTE MAY NEED INGINX PLUS FOR THIS ...
+https://github.com/nginxinc/kubernetes-ingress/tree/master/examples/externalname-services
+
+SECURING KUBERNETES NETWORK NAMESPACES
+https://ahmet.im/blog/kubernetes-network-policy/
+
+1.) Create a SERVICE w/ same name in 
+    multiple Namespaces. 
+or
+2.) Use built-in DNS service discovery and just
+    point your app at the SERVICE's name (So how to we do that exactly)
+
+
+NOTE:
+
+Services in Kubernetes expose their endpoints by using a "COMMON DNS PATTERN"
+<Service Name>.<Namespace Name>.svc.cluster.local
+
+
+keycloak-0.keycloak-headless.keycloak.svc.cluster.local
+
+[ Same Namespace ]
+Just Use "<Service Name>" //  DNS will AUTO RESOLVE to FULL ADDRESS
+
+[ Cross Namespace ]
+Example:
+Connect to <database_service> in [ Test-Namespace ]
+
+Use:
+<Service Name>.<Namespace Name>
+database.test
+
+Example Yaml ...
+(Res) -- https://stackoverflow.com/questions/37221483/service-located-in-another-namespace
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: service-y
+  namespace: namespace-a
+spec:
+  type: ExternalName
+  externalName: service-x.namespace-b.svc.cluster.local
+  ports:
+  - port: 80
+=================================/////=====================================================
+
+
+
+
+
+
+ENABLE CLOUD WATCH LOGGING
+==========================
+
+$ eksctl utils update-cluster-logging --region=us-east-2 --cluster=stc-sandbox01'
+
+
+
+------------------------------------------------------------------------------------------------------------
+
+						[ MIGRATE A NEW NODE GROUP ]
+
+Reasons to do so ...
+
+- Newly created pods in a "PENDING" state
+- Logs show “0/3 nodes are available: 3 Insufficient pods” 
+
+Issue ...
+This is a "Network Limitation Issue"
+
+* whenever you deploy a Pod on a worker node, EKS creates a new 
+  IP address from VPC subnet and attach it to the instance.
+
+* Therefore, there is a "max pods limit for each EC2 instance type", 
+  depending on the maximum supported Network Interfaces for this instance 
+  type, and the IPv4 Addresses per Interface.
+
+
+Solution ...
+
+1.) Retrieve Worker Node & Node Group Data
+	$ kubectl get nodes
+	$ eksctl get nodegroups --cluster=<default>
+
+
+2.) FIND APPROP. EC2 Instance Type 
+	https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html#AvailableIpPerENI
+  
+	Max Pods = ( Maximum supported Network Interfaces for instance type ) * ( IPv4 Addresses per Interface ) - 1
+	3*6-1 == 17 Pods per Instacne
+
+3.) Migrate to a new node group
+        https://docs.aws.amazon.com/eks/latest/userguide/migrate-stack.html
+         
+        eksctl create nodegroup \
+	--cluster <default> \
+	--version <1.17> \
+	--name <standard-nodes-new> \
+	--node-type <t3.medium> \
+	--nodes <3> \
+	--nodes-min <1> \
+	--nodes-max <4> \
+	--node-ami auto
+
+        Verify All Nodes In Ready State ...
+        $ kubectl get nodes
+
+        Delete Original Node Group
+	$ eksctl delete nodegroup --cluster <default> --name <ng_name>
+
+
+4.) "AUTH CONFIG" MUST reflect new NodeInstanceRole associated w/ new Worker Nodes
+ 
+	$ kubectl edit configmap -n kube-system aws-auth
+
+apiVersion: v1
+data:
+  mapAccounts: |
+    - "640517671398"
+  mapRoles: |
+    - groups:
+      - system:bootstrappers
+      - system:nodes
+      rolearn: arn:aws:iam::640517671398:role/eksctl-stc-002-nodegroup-ng-t2xlr-NodeInstanceRole-11WPZJAODEFC7
+      username: system:node:{{EC2PrivateDNSName}}
+
+NOTE: If you don't see the above content then something is wrong. 
+
+
+5.) IAM ROLES ... This new "NodeInstanceRole" should also be created and listed"
+
+	- ATTACH POLICY "k8s-asm-role-policy" to "NodeInstanceRole"
+
+        - EDIT TRUST RELATIONSHIP OF "k8s-stc002-route53-role" Role w/ data below ...
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::640517671398:role/<"NewNodeInstanceRole">
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+6.) EDIT TRUST RELATIONSHIP OF ROLE: "k8s-dns01-validation" w/ data below
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::640517671398:role/<"NewNodeInstanceRole">"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+
+						( END )
+-------------------------------------------------------------------------------------------------------
+
+
+SCALE NODE GROUP:
+https://eksctl.io/usage/managing-nodegroups/
+
+
+
+
+Kubernetes Step-by-step
+https://www.youtube.com/watch?v=l_lWfipUimk
+
+#TRAINING KUBERNETES (IMPORTANT --- IMPORTANT REVIEW!!!
+Explains it well.
+https://www.youtube.com/watch?v=_3NUI5vasPk  (Review This First)
+https://www.google.com/search?q=kubernetes+api+diagram&sxsrf=ALeKk03t3E6gI3i_9dqR8RU0Vuy3pUM3Ig:1586499673211&tbm=isch&source=iu&ictx=1&fir=Re5fAiTKSUF2ZM%253A%252CzbCqKKWLrPVv5M%252C_&vet=1&usg=AI4_-kQVLBwHE3GPEQue7uaI3t5GOBv54g&sa=X&ved=2ahUKEwiqxNTrm93oAhVtJzQIHZmbB-oQ9QEwAHoECAoQHQ#imgrc=ad397TAiW7n-qM
+Review this FIRST:   https://docs.aws.amazon.com/eks/latest/userguide/clusters.html
+REVIEW SECOND: https://www.google.com/search?q=kubernetes+api+diagram&sxsrf=ALeKk03t3E6gI3i_9dqR8RU0Vuy3pUM3Ig:1586499673211&tbm=isch&source=iu&ictx=1&fir=Re5fAiTKSUF2ZM%253A%252CzbCqKKWLrPVv5M%252C_&vet=1&usg=AI4_-kQVLBwHE3GPEQue7uaI3t5GOBv54g&sa=X&ved=2ahUKEwiqxNTrm93oAhVtJzQIHZmbB-oQ9QEwAHoECAoQHQ#imgrc=Re5fAiTKSUF2ZM:
+REVIEW THRID:  https://www.google.com/search?q=kubernetes+api+diagram&sxsrf=ALeKk03t3E6gI3i_9dqR8RU0Vuy3pUM3Ig:1586499673211&tbm=isch&source=iu&ictx=1&fir=Re5fAiTKSUF2ZM%253A%252CzbCqKKWLrPVv5M%252C_&vet=1&usg=AI4_-kQVLBwHE3GPEQue7uaI3t5GOBv54g&sa=X&ved=2ahUKEwiqxNTrm93oAhVtJzQIHZmbB-oQ9QEwAHoECAoQHQ#imgrc=ewGS9fHGOaggmM
+https://www.tutorialspoint.com/kubernetes/kubernetes_jobs.htm   (Must see disects deployment.yaml files /// ALSO cool DIAGRAM)
+
+This is awesome too...
+https://medium.com/faun/learning-kubernetes-by-doing-part-3-services-ed5bf7e2bc8e
+
+#RDS
+-----
+
+EKS vpc to RDS vps (This setup requires peering)
+https://dev.to/bensooraj/accessing-amazon-rds-from-aws-eks-2pc3#update-rds-instance-security-group
+
+-- PostgreSQL as an external cloud service. Connection to your Amazon RDS PostgreSQL instance
+
+Test from AWS CLI
+ 1. Create Database w/Name
+ 2. aws rds generate-db-auth-token \
+ --hostname keycloak-rds-test.cewnn7hs929l.us-east-2.rds.amazonaws.com \
+ --port 5432 \
+ --region us-east-2 \
+ --username postgres
+
+Test w/ psql client 
+
+1. sudo apt-get install postgresql-client
+2. 
+
+
+[ #RBAC ]
+-----
+https://medium.com/faun/add-new-user-to-manage-aws-eks-e487c5d10ee3
+https://medium.com/@alejandro.millan.frias/assigning-iam-users-or-groups-to-manage-a-kubernetes-namespace-with-eks-38d10b1c9d93
+
+
+LIMITED ACCESS TO CLUSTER -- JUST NAMESPACE
+---------------------------------------------
+IMPORTANT -- START HERE DAVID!!!!
+NOTE: This is the one with "DescribeCluster" Policy
+https://docs.aws.amazon.com/eks/latest/userguide/security_iam_id-based-policy-examples.html
+
+
+-- How to manage only specific namespaces with IAM users in Amazon EKS
+ref: https://medium.com/@alejandro.millan.frias/assigning-iam-users-or-groups-to-manage-a-kubernetes-namespace-with-eks-38d10b1c9d93
+
+-- How do I manage permissions across namespaces for my IAM users in an Amazon EKS cluster?
+ref: https://aws.amazon.com/premiumsupport/knowledge-center/eks-iam-permissions-namespaces/
+
+-- How to update "auth config file"
+ref: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#default-roles-and-role-bindings
+
+KEY NOTE: None of this worked until I attached "ROLE POLICY" to USER ...
+$ aws sts assume-role --role-arn arn:aws:iam::640517671398:role/eks-role-full-rights-namespace --role-session-name test2
+
+
+
+
+
+
+Access Dashboard ...
+--------------------
+
+$ sudo apt install jq
+$ aws eks get-token --cluster-name stc | jq -r '.status.token'
+
+CRUCIAL --- KUBE ADMIN ACCOUNT --- CRUCIAL
+https://blog.heptio.com/on-securing-the-kubernetes-dashboard-16b09b1b7aca
+
+
+https://www.youtube.com/watch?v=-ykwb1d0DXU
+
+
+#VOMS 
+-----------
+
+process.json file ...
+
+ "apps" : [
+    {
+      "name"        : "voms-server",
+      "script"      : "/home/node/voms/bin/server.js",
+      "instances"   : 2,
+      "exec_mode"   : "cluster",
+      "cwd"         : "/home/node/voms",
+      "env": {
+        "PRODUCT"                : "voms",
+        "HOST"                   : "vomsapp-sndbx001.hostk8s2.com",
+        "APIHOST"                : "localhost",
+        "PORT"                   : "3102",
+        "APIPORT"                : "3131",
+        "NODE_ENV"               : "production",
+        "SAML_ISSUER"            : "voms",
+        "SAML_ENTRY_POINT"       : "https://keycloak-sndbx001.hostk8s2.com/sso/protocol/saml",
+        "JASPER_SERVER"          : "<JASPER_URL>",
+        "REDIS_URL"              : "redis://localhost:6379",
+        "ENABLE_SSL"             : true,
+        "KEYCLOAK_SESSION_MAX"   : "30",
+        "NEW_RELIC_APP_NAME"     : "",
+        "NEW_RELIC_LICENSE_KEY"  : ""
+      }
+    },
+{
+      "name"        : "voms-api",
+      "script"      : "/home/node/voms/bin/api.js",
+      "instances"   : 2,
+      "exec_mode"   : "cluster",
+      "cwd"         : "/home/node/voms",
+      "env": {
+        "SESSION_SECRET"         : "this is a secret",
+        "PRODUCT"                : "voms",
+        "HOST"                   : "vomsapp-sndbx001.hostk8s2.com",
+        "APIHOST"                : "localhost",
+        "PORT"                   : "3102",
+        "APIPORT"                : "3131",
+        "SERVICE_PORT"           : "3061",
+        "REVERSE_PROXY"          : "true",
+        "NODE_ENV"               : "production",
+        "SAML_ISSUER"            : "voms",
+        "SAML_ENTRY_POINT"       : "https://keycloak-sndbx001.hostk8s2.com/sso/protocol/saml",
+        "JASPER_SERVER"          : "<JASPER_URL>",
+        "KEYCLOAK_SESSION_MAX"   : "30",
+        "REDIS_URL"              : "redis://localhost:6379",
+        "ENABLE_SSL"             : true,
+        "DATABASE_STACKTRACE"    : true,
+        "VOMS_ORACLE_USER"       : "<SIIS_USERNAME>",
+        "VOMS_ORACLE_PASSWORD"   : "<SIIS_PW>",
+        "VOMS_ORACLE_CONNECTION" : "(DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = <SIIS_HOST>)(PORT = 1521)) (CONNECT_DATA = (SID = <SIIS_SID>)))",
+        "LEGACY_IWEB_URL"        : "<IWEB_URL>",
+        "PROGRAM_NAME"           : "<PROGRAM_NAME>",
+        "STATE_CODE"             : "<STATE_CODE>",
+        "CHANGE_ADDRESS_CONTACT" : "<CHANGE_ADDRESS_CONTACT>",
+        "DEFAULT_LOCALE"         : "en-US",
+        "STATE_LOGO_PATH"        : "static/public/img/state_logo.svg",
+        "REPORT_SCHEDULER_PERIOD" : "5",
+        "KEYCLOAK_SESSION_MAX"   : "30",
+        "VOMS_SCHEDULER_API_KEY" : "A`dl4p,JEUT@f1m+U6[p$r0g3r_5m3l1s$g5bahWM",
+        "VOMS_APP_VERSION"       : "<VOMS_VER>",
+        "DB_VERSION"             : "Unknown",
+        "FORECASTER_VERSION"     : "Unknown",
+        "NEW_RELIC_APP_NAME"     : "",
+        "NEW_RELIC_LICENSE_KEY"  : ""
+      }
+    },
+{
+      "name"        : "org-fac-search",
+      "script"      : "/home/node/voms/bin/service.js",
+      "instances"   : 2,
+      "exec_mode"   : "cluster",
+      "cwd"         : "/home/node/voms",
+      "env": {
+        "SESSION_SECRET"         : "this is a secret",
+        "NODE_ENV"               : "production",
+        "SERVICE"                : "org-fac-search",
+        "APIPORT"                : "3131",
+        "SERVICE_PORT"           : "3061",
+        "SAML_ISSUER"            : "voms",
+        "SAML_ENTRY_POINT"       : "https://keycloak-sndbx001.hostk8s2.com/sso/protocol/saml",
+        "JASPER_SERVER"          : "<JASPER_URL>",
+        "KEYCLOAK_SESSION_MAX"   : "30",
+        "REDIS_URL"              : "redis://localhost:6379",
+        "VOMS_ORACLE_USER"       : "<SIIS_USERNAME>",
+        "VOMS_ORACLE_PASSWORD"   : "<SIIS_PW>",
+        "VOMS_ORACLE_CONNECTION" : "((DESCRIPTION = (ADDRESS = (PROTOCOL = TCP)(HOST = <SIIS_HOST>)(PORT = 1521)) (CONNECT_DATA = (SID = <SIIS_SID>)))",
+        "KEYCLOAK_SESSION_MAX"   : "30",
+        "NEW_RELIC_APP_NAME"     : "",
+        "NEW_RELIC_LICENSE_KEY"  : ""
+      }
+    }
+  ]}
+
+PM2 COMMAND
+-----------
+pm2 ls
+pm2 delete process.json 
+pm2 start process.json 
+pm2 logs
+pm2 logs voms-server
+
+
+
+#COREDNS
+---------
+CoreDNS is a fast and flexible DNS server/forwarder written in "Go". If some functionality 
+is not provided out of the box you can add it by writing a plugin.
+
+Understanding CoreDNS
+https://www.youtube.com/watch?v=qRiLmLACYSY
+
+
+helm install --name external-dns --set provider=aws --set aws.region=us-east-2 --set policy=sync --set logLevel=debug --set rbac.create=true --set aws.accessKey=AKIAZKIOUBHTMX6UC4KI \
+  --set aws.secretKey=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 -f values.yaml stable/external-dns
+
+
+
+VOMSAPP goes into Evicted Status
+https://sysdig.com/blog/kubernetes-pod-evicted/
+https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+
+ENV inside yaml file:
+https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/
+
+
+[ #PORTAINER ]
+https://www.youtube.com/watch?v=ARuyau0_j28
+@9:10
+UserName: admin
+PW: bloom$
+
+[ #NODEGROUP ]
+
+-- Get Node Info
+$ eksctl get nodegroups --cluster=<cluster_name> --profile=stc-one-platform-dev
+
+-- Check Nodes Health
+$ eksctl utils nodegroup-health --cluster <clstr_name> --name <ng_name>
+
+DELETE IF NECESSARY
+$ eksctl delete nodegroup --cluster default --name standard-workers
+
+
+
+Add NodeGroup Manually ...
+https://docs.aws.amazon.com/eks/latest/userguide/migrate-stack.html
+
+eksctl create nodegroup \
+--cluster default \
+--version 1.15 \
+--name standard-workers-new \
+--node-type t3.medium \
+--nodes 3 \
+--nodes-min 1 \
+--nodes-max 4 \
+--node-ami auto
+
+
+
+[ #RANCHER ]
+https://rancher.com/blog/2018/2018-06-05-managing-eks-clusters-with-rancher/
+
+[ #AWS SSO ]
+https://www.powerupcloud.com/aws-eks-authentication-and-authorization-using-aws-single-signon/
+
+
+[ #CERT-MANAGER ]
+
+BUG FIXES & RELEASE NOTES
+https://cert-manager.io/docs/release-notes/release-notes-0.12/
+
+Certificates
+-- Force Renewal of certificate with Cert-Manager
+   Note: The certificate will be in a kubernetes secret 
+
+Check it out first ...
+$ kubectl get secret "name_of_your_secret" -o yaml
+  
+  Both should be populated ...
+  -- tls.crt
+  -- tls.key
+  
+Let's go Deeper w/ Certificate 
+$ kubectl get secrets -o json | jq -r '.items[].data | select(has("tls.crt")) | ."tls.crt"' | base64 -d | openssl x509 -noout -text
+
+
+
+USER: test2
+Access key id: AKIAZKIOUBHTIBTJE6E3
+Secret key : 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
+
+arn:aws:iam::640517671398:user/test2
+
+
+[ #NEXUS ]
+
+USER: 	stcopsadmin
+PW:	ZjVmNGRlOWZkMDJmZTU1NTFmMTZmZGI1
+
+PATH_TO_WAR = Latest-n-greatest
+https://nexus.stchealthops.com/repository/raw-hosted/stc/iweb_az/v5.30.0/noarch/iweb_az_v5.30.0.war
+PAT_TO_HOMEPAGES
+https://nexus.stchealthops.com/repository/raw-hosted/stc/in.iwebhomepages/202003021105/noarch/stc.in.iwebhomepages-202003021105.tar.gz
+
+
+[ #HELM CHARTS ]
+
+Charts ...
+
+hub-kubeapps
+https://hub.kubeapps.com/
+
+Bitnami
+https://bitnami.com/stacks/helm
+
+
+
+					STARTHERE
+				[[[[[ #Service Catalog ]]]]]
+
+INTRODUCTION ---
+
+https://aws.amazon.com/blogs/opensource/provision-aws-services-kubernetes-aws-service-broker/
+https://cloud.google.com/migrate/kf/docs/concepts/aws-sb
+https://medium.com/@HoussemDellai/introduction-to-kubernetes-service-catalog-37317b15670  (Pay attention to this one)
+
+1. What is Service Catalog ?
+Service Catalog is an extension to the Kubernetes API. It enables k8s 
+to provision and connect to external managed services like databases 
+and messaging systems.
+
+2. How Service Catalog works ?
+To provision and connect to a cloud service, Kubernetes should talk to 
+Service Catalog which in its turn should talk to Open Service Broker 
+specific implementation for Azure or AWS or GCP etc…
+
+3. 2. What is Open Service Broker API (OSBA)
+Open Service Broker API defines a specification for listing, provisioning, 
+accessing and deprovisioning cloud services. It have implementations for 
+many cloud providers. Each implemenetation have a list of services that 
+can be managed:
+
+4. Service Broker for AWS: Amazon Relational Database Service (Amazon RDS), 
+Amazon EMR, Amazon DynamoDB, Amazon Simple Storage Service (Amazon S3), and 
+Amazon Simple Queue Service (Amazon SQS).
+
+
+
+PREREQ ---
+https://github.com/awslabs/aws-servicebroker/blob/master/docs/install_prereqs.md
+
+Step 1.) Setup DynamoDB
+-----------------------
+
+aws dynamodb create-table --attribute-definitions \
+AttributeName=id,AttributeType=S AttributeName=userid,AttributeType=S \
+AttributeName=type,AttributeType=S --key-schema AttributeName=id,KeyType=HASH \
+AttributeName=userid,KeyType=RANGE --global-secondary-indexes \
+'IndexName=type-userid-index,KeySchema=[{AttributeName=type,KeyType=HASH},{AttributeName=userid,KeyType=RANGE}],Projection={ProjectionType=INCLUDE,NonKeyAttributes=[id,userid,type,locked]},ProvisionedThroughput={ReadCapacityUnits=5,WriteCapacityUnits=5}' \
+--provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 \
+--region us-east-2 --profile stc-one-platform-dev --table-name awssb-test01
+
+  1a.) Verify Results
+       $ aws dynamodb list-tables --region us-east-2 --profile stc-one-platform-dev
+
+       {
+              "TableNames": [
+                  "awssb-test01"
+              ]
+       }
+
+
+Step 2.) Create Policy/Role
+---------------------------
+
+NOTE:
+THIS IS THE COMBINED POLICIES TO FORM SINGLE ROLE
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        
+        {
+        "Sid": "SsmForSecretBindings",
+        "Action": "ssm:PutParameter",
+        "Resource": "arn:aws:ssm:<REGION>:<ACCOUNT_ID>:parameter/asb-*",
+        "Effect": "Allow"
+        },
+        
+        {
+        "Sid": "AllowCfnToGetTemplates",
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::awsservicebroker/templates/*",
+        "Effect": "Allow"
+        },
+        
+        {
+         "Sid": "CloudFormation",
+         "Action": [
+            "cloudformation:CreateStack",
+            "cloudformation:DeleteStack",
+            "cloudformation:DescribeStacks",
+            "cloudformation:DescribeStackEvents",
+            "cloudformation:UpdateStack",
+            "cloudformation:CancelUpdateStack"
+         ],
+         "Resource": [
+            "arn:aws:cloudformation:<REGION>:<ACCOUNT_ID>:stack/aws-service-broker-*/*"
+         ],
+         "Effect": "Allow"
+        },
+        
+        {
+        "Sid": "ServiceClassPermissions",
+        "Action": [
+           "athena:*",
+           "dynamodb:*",
+           "kms:*",
+           "elasticache:*",
+           "elasticmapreduce:*",
+           "kinesis:*",
+           "rds:*",
+           "redshift:*",
+           "route53:*",
+           "s3:*",
+           "sns:*",
+           "sqs:*",
+           "ec2:*",
+           "iam:*",
+           "lambda:*"
+        ],
+        "Resource": [
+           "*"
+        ],
+        "Effect": "Allow"
+        },
+    
+        {
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::awsservicebroker/templates/*",
+                "arn:aws:s3:::awsservicebroker"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:GetItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:us-east-2:640517671398:table/awssb-test01",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "ssm:GetParameter",
+                "ssm:GetParameters"
+            ],
+            "Resource": [
+                "arn:aws:ssm:us-east-2:640517671398:parameter/asb-*",
+                "arn:aws:ssm:us-east-2:640517671398:parameter/Asb*"
+            ],
+            "Effect": "Allow"
+        }
+    ]
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+Step 1.) Service Catalog Repo Setup
+-----------------------------------
+
+HELM RELEASES /// MUST REFER TO THIS
+https://github.com/helm/helm/releases/tag/v2.7.2
+
+(Install svc-cat repo)
+----------------------
+helm repo add svc-cat https://kubernetes-sigs.github.io/service-catalog
+helm repo list
+helm search svc-cat
+
+(Install Catalog)
+-----------------
+helm install --name catalog svc-cat/catalog --namespace catalog 
+kubectl api-versions		(Should See Catalog Registered with Kubernetes API list)
+
+(Install Broker Repo)
+---------------------
+helm repo add aws-sb https://awsservicebroker.s3.amazonaws.com/charts
+(Inspect Repo)
+helm inspect aws-sb/aws-servicebroker
+Error v1 and v2
+
+Resolution ... 
+https://github.com/argoproj/argo-cd/issues/3901 
+     (directs you to url below)
+https://v2.helm.sh/docs/developing_charts/#the-chart-yaml-file
+
+
+Access Key ID: 		AKIAZKIOUBHTEOLQZTEA
+Secret Access Key Id: 	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
+
+
+$ helm3 repo add svc-cat https://kubernetes-sigs.github.io/service-catalog
+$ helm3 repo list
+$ helm3 search repo service-catalog
+
+
+Step 2.) Install Service Catalog
+--------------------------------
+$ helm3 install catalog svc-cat/catalog --namespace catalog --create-namespace
+$ helm3 list -A
+$ kubens 
+$ kubectl api-versions		(Should See Catalog Registered with Kubernetes API list)
+
+
+Step 3.) Install Service Catalog CLI
+------------------------------------
+$ curl -sLO https://download.svcat.sh/cli/latest/darwin/amd64/svcat
+$ chmod +x ./svcat
+$ mv ./svcat /usr/local/bin/
+$ svcat version --client
+
+
+Step 4.) Install SVCAT Plugins
+------------------------------
+url res: https://svc-cat.io/docs/cli/
+$ svcat install plugin
+
+URL Resource --> 
+https://github.com/kubernetes-sigs/service-catalog/blob/master/docs/install.md
+
+
+[ #AWS Service Broker ]
+
+Step 1.) Install ASB Repo
+-------------------------
+$ helm3 repo add aws-sb https://awsservicebroker.s3.amazonaws.com/charts
+$ helm3 inspect all|chart aws-sb/aws-servicebroker
+
+Step 2.) Install ASB 
+--------------------
+NOTE: We decided to put ASB inside catalog namespace and pass in the creds to create ASB contaners. This seems to work. 
+
+$ helm install aws-servicebroker aws-sb/aws-servicebroker \
+  -- namespace catalog \
+  --set aws.region=us-east-2 \
+  --set aws.accesskeyid=<THIS_IS_THE_KEY_ID> \
+  --set aws.secretkey=<THIS_IS_THE_SECRET_ACCESS_KEY>
+
+$ svcat get broker				(Get Broker Status)
+$ k get clusterservicebrokers
+$ svcat describe broker aws-servicebroker	(Will Describe Broker Details)
+
+NOTE: Broker URL doesn't have to be apart of Cluster. You can hosted it elsewhere and point 
+      your clusters to it. 
+
+$ aws sts get-caller-identity			(Get Account ID)
+
+
+SAMPLES ...
+$ helm3 install aws-servicebroker aws-sb/aws-servicebroker --wait --namespace aws-sb --version 1.0.1 --set aws.region=us-east-2 --set aws.targetrolename=aws_service_broker
+Note: """values.yaml""" file was updated with "awsaccess/secret keys and it worked.
+
+$ helm3 install aws-servicebroker aws-sb/aws-servicebroker --namespace aws-sb --create-namespace -f values.yaml
+
+*****************************************************************************************
+Shows you how to connect the DB's IMPORTANT !!!!
+https://medium.com/@HoussemDellai/introduction-to-kubernetes-service-catalog-37317b15670
+*****************************************************************************************
+
+
+
+
+---------------------------------------------------------------------------------
+
+Install new version of HELM
+https://github.com/helm/helm/releases/tag/v2.7.2
+
+kubectl version --client  (Svc Catalog requires kubectl binary to be 1.13 or >)
+Download Kubectl 
+https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-on-linux
+
+Create User:
+aws-svc-broker  (has admin privs)
+
+Access Key ID: 		AKIAZKIOUBHTEOLQZTEA
+Secret Access Key Id: 	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
+
+
+
+
+
+HELM3 Management -- Good Source URL
+https://thorsten-hans.com/the-state-of-helm3-hands-on
+
+DELETE CHART ... This Works w/ HELM3
+$ helm3 uninstall <chart_name> -n <namespace>
+$ kubectl delete ns <namespace>
+$ helm3 list -A
+
+
+
+Service Catalog / Kubernetes
+----------------------------
+https://kubernetes.io/docs/concepts/extend-kubernetes/service-catalog/
+
+
+
+
+                         [ CONFLUENT ]
+
+My Confluent Login
+https://confluent.cloud/login
+
+<CREDS>
+IWeb prod instance on confluent
+key: UIKI2Y6TZ7BUOCC5
+secret: GHO5WWmeKKKy18oGt9HYqbOwORUX55pdgBR9V7LtGTelzBbTsNqdp/rcDgh95NCK
+
+<Docs>
+https://docs.confluent.io/current/cloud/clusters/index.html
+https://docs.confluent.io/current/cloud/access-management/index.html
+
+NOTE:
+Useful from the Ops side of things. there are links to networking and other ones underneath that. 
+but its a good jumping off point.
+
+
+[DataBricks]
+
+LOGIN
+https://dbc-0f9ffe7d-9bdd.cloud.databricks.com/login.html?o=2437663151334923
+
+Secondary Account
+https://accounts.cloud.databricks.com/registration.html
+
+
+
+[ Jenkins Server ]
+==================
+https://stcjenkins.stchealthops.com/jenkins/view/TF%20Jobs/
+
+U: dnewman1
+P: Dak#FN3sO8dY8T2ZdTZ
+
+
+
+Home Page Edit ...
+======================================================================
+1. Review Github link for HPE - Devops sends a PR and merges it.
+2. https://stcjenkins.stchealthops.com/jenkins/view/HomepagePackage/ - Build the respective HPE TAR file - copy the TAR file name.
+3. Update the HPE TAR file name in the customer.conf in  - https://github.com/STC-Health/stc.packerbuild.iwebapp/blob/full_blown/customer.conf
+and the comment should be "HPE for la.ct3" for ex.
+4. Check if build is triggered automatically in - https://stcjenkins.stchealthops.com/jenkins/view/IWEB%20Packerbuild/job/stc.packerbuild.iwebappn_hpe_and_old_version_AMI_Automated/
+5. Once AMI is done, validate it in AWS AMI.
+6. Trigger this job accordingly - https://stcjenkins.stchealthops.com/jenkins/view/TF%20Jobs/job/TF_HPE_Only/
+7. Chekc the URL and it will consume 5-15 mins. Shall be double checked in EC2 instances and ask T2 to validate.
+
+[ MobaXterm ]
+==============
+Talk to Steve for License. 
+
+
+[ Maintenance Link -- Future Work ]
+===================================
+https://stchome.atlassian.net/wiki/spaces/DEVOPS/pages/1611333637/2021-02-22+Release+and+Maintenance+Planning
+
+[ ANSIBLE ]
+============
+https://github.com/STC-Health/stc.opsteam/tree/master/ansible-STC
+
+
+[ DATADOG ]
+===========
+https://app.datadoghq.com/dashboard/lists
+
+[ BUILDING AMI ]
+================
+For AMi build for PHC and IWEB for older versions released later than the latest version i.e 5.38.4 released after 5.39.2 I did the below.
+For PHCHUB - https://github.com/STC-Health/stc.packerbuild.phcapp/blob/full_blown/customer.conf - Just changed the version to 5.38.4 . This 
+should automatically trigger the job - https://stcjenkins.stchealthops.com/jenkins/view/PHCHUB%20Packerbuild/job/stc.packerbuild.phcapp_build_manual_old_method/
+The above steps are for version without kc9.
+With KC( we have to build another one with updating version in Conf file
+=======================================================================================================
+For IWEB - as it is specific to states - https://github.com/STC-Health/stc.packerbuild.iwebapp/blob/full_blown/customer.conf - I changed in this case for WA PROD -
+# wa.cp2
+customer_wa.cp2,us-west-2,iweb_wa_v5.38.4.war,stc.wa.iwebhomepages-202009240907.tar.gz
+Then triggered this - https://stcjenkins.stchealthops.com/jenkins/view/IWEB%20Packerbuild/job/stc.packerbuild.iwebappn_hpe_and_old_version_AMI/ with 
+the right parameters - wa and cp2 in this case.
+=======================
+
+[ IWEB / PHCHUB UPGRADES ]
+==========================
+
+1.) Check URL List
+https://github.com/STC-Health/stc.infrastructure.terraform/blob/full_blown_multiple_version/url_lists.txt
+
+CutnPaste in Browser --> dc.ct1.iweb https://dcct1web.stchealthops.com/iweb/
+Get more Info        --> dc.ct1.iweb https://dcct1web.stchealthops.com/iweb/version.html
+
+2.) B4 Deployment ... Verify if AMI exist --> Goto AWS/AMI's 
+	a.) Sort by Latest Creation Date
+        b.) Check Mark AMI
+        c.) tags --> Cust_Iweb_War copy paste. 			(NOTE: IWEB is Custom / PHCHUB is NOT)
+
+
+3.) Goto Jenkins to Run Jobs
+        a.) Click TF_Jobs
+        b.) Click TF_stop_tomcat_db_scripts_multiple_version_start_tomcat  (Stops apps server, logs-into bastion host and runs DB Script)
+        c.) Build w/ Parameters
+            State name
+            Environment
+            Type Version
+            Click "Build"
+
+
+
+instance-name: tn-ct2-asg-blue-iwebapp
+env: tn.ct2
+az: us-east-1a
+
+ iweb_tn_v5.40.1.war_tn.ct2  
+
+
+[ HOME PAGE EDITS ]
+===================
+
+1.) Jenkins
+2.) Homepage Package
+    - creare Homepage "tarfile"
+    - create "tarball" to build "AMI"
+
+    Note: Angie does HTML for Home Page
+
+
+
+[ DATABRICKS ]
+==============
+
+dbutils.fs.ls("s3a://dbricks-oregon-us-west-2")
+
+
+aws_bucket_name = "dbricks-oregon-us-west-2"
+mount_name = "dbrk_mnt"
+dbutils.fs.mount("s3a://%s" % aws_bucket_name, "/mnt/%s" % mount_name)
+
+
+aws_bucket_name = "dbricks-oregon-us-west-2"
+mount_name = "dbrk_mnt"
+dbutils.fs.unmount("/mnt/%s" % mount_name)
+
+
+
+
+[ MongoDB ]
+============
+
+Intall MongoDB
+https://docs.mongodb.com/manual/tutorial/install-mongodb-on-ubuntu/
+
+DB Congi - Setup User
+https://linuxize.com/post/how-to-install-mongodb-on-ubuntu-18-04/#creating-administrative-mongodb-user
+https://ianlondon.github.io/blog/mongodb-auth/
+
+db.createUser({
+    user: 'dnewman',
+    pwd: 'abc123',
+    roles: [{ role: 'readWrite', db:'mydb_test'}]
+})
+
+mongo -u mongoAdmin -p changeMe 54.186.33.22/admin
+
+
+
+
+
+
