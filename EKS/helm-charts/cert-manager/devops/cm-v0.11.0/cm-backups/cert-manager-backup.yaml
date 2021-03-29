@@ -1,0 +1,114 @@
+apiVersion: v1
+items:
+- apiVersion: cert-manager.io/v1alpha2
+  kind: ClusterIssuer
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"cert-manager.io/v1alpha2","kind":"ClusterIssuer","metadata":{"annotations":{},"name":"letsencrypt-devops-production"},"spec":{"acme":{"dns01":{"providers":[{"name":"route53","route53":{"region":"us-east-2"}}]},"email":"joe_kelly@stchome.com","privateKeySecretRef":{"name":"production-issuer-acct-key"},"server":"https://acme-v02.api.letsencrypt.org/directory","solvers":[{"dns01":{"route53":{"accessKeyID":"AKIAZKIOUBHTMX6UC4KI","region":"us-east-2","secretAccessKeySecretRef":{"key":"secret-access-key","name":"iam-creds"}}}}]}}}
+    creationTimestamp: "2020-05-12T20:27:54Z"
+    generation: 1
+    name: letsencrypt-devops-production
+    resourceVersion: "99556"
+    selfLink: /apis/cert-manager.io/v1alpha2/clusterissuers/letsencrypt-devops-production
+    uid: 0f6d8510-948f-11ea-a2d8-0a95f43d68b8
+  spec:
+    acme:
+      email: joe_kelly@stchome.com
+      privateKeySecretRef:
+        name: production-issuer-acct-key
+      server: https://acme-v02.api.letsencrypt.org/directory
+      solvers:
+      - dns01:
+          route53:
+            accessKeyID: AKIAZKIOUBHTMX6UC4KI
+            region: us-east-2
+            role: ""
+            secretAccessKeySecretRef:
+              key: secret-access-key
+              name: iam-creds
+  status:
+    acme:
+      lastRegisteredEmail: joe_kelly@stchome.com
+      uri: https://acme-v02.api.letsencrypt.org/acme/acct/85974941
+    conditions:
+    - lastTransitionTime: "2020-05-12T20:27:55Z"
+      message: The ACME account was registered with the ACME server
+      reason: ACMEAccountRegistered
+      status: "True"
+      type: Ready
+- apiVersion: cert-manager.io/v1alpha2
+  kind: Certificate
+  metadata:
+    creationTimestamp: "2020-05-14T00:09:59Z"
+    generation: 1
+    labels:
+      app: vomsapp2
+    name: vomsapp2-production-cert
+    namespace: vomsapp
+    ownerReferences:
+    - apiVersion: extensions/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Ingress
+      name: vomsapp2
+      uid: 40068f13-9577-11ea-a2d8-0a95f43d68b8
+    resourceVersion: "61499191"
+    selfLink: /apis/cert-manager.io/v1alpha2/namespaces/vomsapp/certificates/vomsapp2-production-cert
+    uid: 4008955d-9577-11ea-8615-02a79501b516
+  spec:
+    dnsNames:
+    - vomsapp2-devops.hostk8s2.com
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt-devops-production
+    secretName: vomsapp2-production-cert
+  status:
+    conditions:
+    - lastTransitionTime: "2020-05-14T00:11:40Z"
+      message: Certificate is up to date and has not expired
+      reason: Ready
+      status: "True"
+      type: Ready
+    notAfter: "2021-04-08T19:17:59Z"
+- apiVersion: cert-manager.io/v1alpha2
+  kind: CertificateRequest
+  metadata:
+    annotations:
+      cert-manager.io/certificate-name: vomsapp2-production-cert
+      cert-manager.io/private-key-secret-name: vomsapp2-production-cert
+    creationTimestamp: "2021-01-08T20:16:27Z"
+    generation: 1
+    labels:
+      app: vomsapp2
+    name: vomsapp2-production-cert-2303006873
+    namespace: vomsapp
+    ownerReferences:
+    - apiVersion: cert-manager.io/v1alpha2
+      blockOwnerDeletion: true
+      controller: true
+      kind: Certificate
+      name: vomsapp2-production-cert
+      uid: 4008955d-9577-11ea-8615-02a79501b516
+    resourceVersion: "61499189"
+    selfLink: /apis/cert-manager.io/v1alpha2/namespaces/vomsapp/certificaterequests/vomsapp2-production-cert-2303006873
+    uid: 637bd9d4-51ee-11eb-abb9-06eeb55bfe7a
+  spec:
+    csr: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ2xqQ0NBWDRDQVFBd0Z6RVZNQk1HQTFVRUNoTU1ZMlZ5ZEMxdFlXNWhaMlZ5TUlJQklqQU5CZ2txaGtpRwo5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBNnJaVlgySnh5RUNjcVRPcWNTOHJBTEREZHN3V2tLTE1OQ24xCjBTWlMvaU81OUpZcUU5U1NNckhaN2pPaDdQMEhuMVNrNXZRbjFJcEo1a1F0c2tTVWx3MVRhaXlzOFNJcUlUWEIKNEpSWHRYbW4xQUlvcUN5ZGM1cHg2ZXZKdWlYRWFGSkJEa1dzMDlsblBWU2FLRC9YRlVrc1FLaXYySm1EaXZkZwoyRGtOcmlGTEtVREMzNDBCdkRTTW5XaTZEUWJOZkFGbWFYVTU5V0RveXN5UGtkYkRSQXREU3hOYzZtVWNMUkNuCnFadEs3RlNsS0lpQkdQZ2lPbmpwZWV4S28yM2ZLMjJXVDBNQmw0alFjSFVrZTYzTFNtQzNudXJqTXFvOHpWSncKbE0zTlljenFzL1Y0WnBlMW1FVXllRXptVEhzUEtPMzZWNTVHYk54Mm5ZbzUvUnZJMndJREFRQUJvRG93T0FZSgpLb1pJaHZjTkFRa09NU3N3S1RBbkJnTlZIUkVFSURBZWdoeDJiMjF6WVhCd01pMWtaWFp2Y0hNdWFHOXpkR3M0CmN6SXVZMjl0TUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCRTZtQVg4cDdJZWlQNHNCVWM3TlN5ZjROY1pPSGwKZ3hncXZyYUttekNrNXhJSmlkYjZVSmdzaFpPSE9qalByclgwaHRIOG1FNjFxcklWSUVKWmx0ODB6eUdhSkNEQwpuY0d6Ylh1NTI2bXNQYThDSGpnMVhaUUYrOFBmZm5QcVBUb0ZKakc3M214ZDdYeXN4ajFtamtCN0MzakVBTkVMCkNmbnFnWklSeVc4TjRieGpWMHJ4MFNTQWowZmtOY2tJbFNRK0ltbTJmVWxRTVlZbVZZcmxiTEEvTTZDcWRnTkwKUGoyNE9oMkNVckw5QzJId29rdVo3VkkyUHlTR0VkKzMzWFVUckVCRDA3VHd5Y3hmaE14cGxOeHZPOWw4RzVNVAp6YkExYzY3YTAxOWs5Uk1YdjkxdzhvWGE4ODc0dE8vdlA4bS92L3UwUHlwS2xpbW43VE5FTi93SAotLS0tLUVORCBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0K
+    issuerRef:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt-devops-production
+  status:
+    certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZQakNDQkNhZ0F3SUJBZ0lTQk9XMEVBNjYrd0c3NTd2RWtJL2ZSbEdzTUEwR0NTcUdTSWIzRFFFQkN3VUEKTURJeEN6QUpCZ05WQkFZVEFsVlRNUll3RkFZRFZRUUtFdzFNWlhRbmN5QkZibU55ZVhCME1Rc3dDUVlEVlFRRApFd0pTTXpBZUZ3MHlNVEF4TURneE9URTNOVGxhRncweU1UQTBNRGd4T1RFM05UbGFNQ2N4SlRBakJnTlZCQU1UCkhIWnZiWE5oY0hBeUxXUmxkbTl3Y3k1b2IzTjBhemh6TWk1amIyMHdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUEKQTRJQkR3QXdnZ0VLQW9JQkFRRHF0bFZmWW5ISVFKeXBNNnB4THlzQXNNTjJ6QmFRb3N3MEtmWFJKbEwrSTduMApsaW9UMUpJeXNkbnVNNkhzL1FlZlZLVG05Q2ZVaWtubVJDMnlSSlNYRFZOcUxLenhJaW9oTmNIZ2xGZTFlYWZVCkFpaW9MSjF6bW5IcDY4bTZKY1JvVWtFT1JhelQyV2M5Vkpvb1A5Y1ZTU3hBcUsvWW1ZT0s5MkRZT1EydUlVc3AKUU1MZmpRRzhOSXlkYUxvTkJzMThBV1pwZFRuMVlPakt6SStSMXNORUMwTkxFMXpxWlJ3dEVLZXBtMHJzVktVbwppSUVZK0NJNmVPbDU3RXFqYmQ4cmJaWlBRd0dYaU5Cd2RTUjdyY3RLWUxlZTZ1TXlxanpOVW5DVXpjMWh6T3F6CjlYaG1sN1dZUlRKNFRPWk1ldzhvN2ZwWG5rWnMzSGFkaWpuOUc4amJBZ01CQUFHamdnSlhNSUlDVXpBT0JnTlYKSFE4QkFmOEVCQU1DQmFBd0hRWURWUjBsQkJZd0ZBWUlLd1lCQlFVSEF3RUdDQ3NHQVFVRkJ3TUNNQXdHQTFVZApFd0VCL3dRQ01BQXdIUVlEVlIwT0JCWUVGRjVRNkVXYjUveW5lMDVVTHJVVlJjU0d0THk2TUI4R0ExVWRJd1FZCk1CYUFGQlF1c3hlM1dGYkxybEFKUU9ZZnI1MkxGTUxHTUZVR0NDc0dBUVVGQndFQkJFa3dSekFoQmdnckJnRUYKQlFjd0FZWVZhSFIwY0RvdkwzSXpMbTh1YkdWdVkzSXViM0puTUNJR0NDc0dBUVVGQnpBQ2hoWm9kSFJ3T2k4dgpjak11YVM1c1pXNWpjaTV2Y21jdk1DY0dBMVVkRVFRZ01CNkNISFp2YlhOaGNIQXlMV1JsZG05d2N5NW9iM04wCmF6aHpNaTVqYjIwd1RBWURWUjBnQkVVd1F6QUlCZ1puZ1F3QkFnRXdOd1lMS3dZQkJBR0MzeE1CQVFFd0tEQW0KQmdnckJnRUZCUWNDQVJZYWFIUjBjRG92TDJOd2N5NXNaWFJ6Wlc1amNubHdkQzV2Y21jd2dnRUVCZ29yQmdFRQpBZFo1QWdRQ0JJSDFCSUh5QVBBQWRnQkVsR1V1c083T3I4UkFCOWlvL2lqQTJ1YUN2dGpMTWJVLzB6T1d0YmFCCnFBQUFBWGJqcGc3VEFBQUVBd0JITUVVQ0lDL2dGZGgzTzRJZ2JLaXZ6SzFFVzJlYm1XRlU1azlhcXRFWU5oVGwKWk8xc0FpRUE4M3VYU2hYb201cXJkQ2lpdkRMa0phUTROZUZRV1I5NmRNUm9FdlEzd3dnQWRnRDJYSlF2MFhjdwpJaFJVR0Fnd2xGYU80MDBUR1RPLzN3d3ZJQXZNVHZGazR3QUFBWGJqcGc2OUFBQUVBd0JITUVVQ0lRRHUvNW1QCk1OWVRSYWhZRUpqWHYwckQrc1lBQnUzamRwaCtGcTBMam1ZbUNnSWdIakRzdC9yZUo2dFpyRXpxOE15bFFGMzIKVzlBbllHaVd3UGo4KzVhekpvOHdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBSkxPMEhqeTllb0FVY29FbnI0ZApiblRzbTNrVGY5cTVQUzVHWURmTWVNb3RCODdBOEQvcFB5MXdJUmVlaldZMVlMTEV4MFFTSndCMExDbUcxdjd6CmowWXhHVlhDZmFvQy8vSjhZbmR5RDk1OFM1OVNzVFVqUU56QjY1OTl5Z2xYZzJlRDVjNUJzRUFxM1FNZHhsWGIKaVd0VG1RMUNtVWtmYnhmQ3VwT2ZWbU9hRmI0ZnlmWStuVW14bVFzdkRlZHJXSlEwRXNwRU5jWEdSejVDN3V3eApWZzIyYmFtZCtiRFNmUzNSVTkxNXlPcnhmOXMvOWplT0dCbm1Qb3NaenI5azNjaFc3TXprMTZZQzJMTlhiRkNECmEyTGNhbkNvZURudWQ4UDZkQ2tYRGV4cDdlbk5xM2hvSzV3VWkrcW9sQjFrUDhRTjZXeWdUcXhUb2NWQkIzVGgKelBzPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCi0tLS0tQkVHSU4gQ0VSVElGSUNBVEUtLS0tLQpNSUlFWlRDQ0EwMmdBd0lCQWdJUVFBRjFCSU1VcE1naGpJU3BEQmJOM3pBTkJna3Foa2lHOXcwQkFRc0ZBREEvCk1TUXdJZ1lEVlFRS0V4dEVhV2RwZEdGc0lGTnBaMjVoZEhWeVpTQlVjblZ6ZENCRGJ5NHhGekFWQmdOVkJBTVQKRGtSVFZDQlNiMjkwSUVOQklGZ3pNQjRYRFRJd01UQXdOekU1TWpFME1Gb1hEVEl4TURreU9URTVNakUwTUZvdwpNakVMTUFrR0ExVUVCaE1DVlZNeEZqQVVCZ05WQkFvVERVeGxkQ2R6SUVWdVkzSjVjSFF4Q3pBSkJnTlZCQU1UCkFsSXpNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXV3SVZLTXoyb0pUVER4THMKalZXU3cvaUM4Wm1tZWtLSXAxMG1xclVydWNWTXNhK09hL2wxeUtQWEQwZVVGRlUxVjR5ZXFLSTVHZldDUEVLcApUbTcxTzhNdTI0M0FzRnp6V1RqbjdjOXA4Rm9MRzc3QWxDUWxoL28zY2JNVDV4eXM0WnZ2MitRN1JWSkZscW5CClU4NDB5Rkx1dGE3dGo5NWdjT0tsVkt1MmJRNlhwVUEwYXl2VHZHYnJaalI4K211TGoxY3BtZmd3RjEyNmNtLzcKZ2NXdDBvWllQUmZINXdtNzhTdjNodHpCMm5GZDFFYmp6SzBsd1lpOFlHZDFaclB4R1BlaVhPWlQvenFJdGtlbAoveE1ZNnBnSmR6K2RVL25QQWVYMXBuQVhGSzlqcFArWnM1T2QzRk9uQnY1SWhSMmhhYTRsZGJzVHpGSUQ5ZTFSCm9ZdmJGUUlEQVFBQm80SUJhRENDQVdRd0VnWURWUjBUQVFIL0JBZ3dCZ0VCL3dJQkFEQU9CZ05WSFE4QkFmOEUKQkFNQ0FZWXdTd1lJS3dZQkJRVUhBUUVFUHpBOU1Ec0dDQ3NHQVFVRkJ6QUNoaTlvZEhSd09pOHZZWEJ3Y3k1cApaR1Z1ZEhKMWMzUXVZMjl0TDNKdmIzUnpMMlJ6ZEhKdmIzUmpZWGd6TG5BM1l6QWZCZ05WSFNNRUdEQVdnQlRFCnA3R2tleXh4K3R2aFM1QjEvOFFWWUlXSkVEQlVCZ05WSFNBRVRUQkxNQWdHQm1lQkRBRUNBVEEvQmdzckJnRUUKQVlMZkV3RUJBVEF3TUM0R0NDc0dBUVVGQndJQkZpSm9kSFJ3T2k4dlkzQnpMbkp2YjNRdGVERXViR1YwYzJWdQpZM0o1Y0hRdWIzSm5NRHdHQTFVZEh3UTFNRE13TWFBdm9DMkdLMmgwZEhBNkx5OWpjbXd1YVdSbGJuUnlkWE4wCkxtTnZiUzlFVTFSU1QwOVVRMEZZTTBOU1RDNWpjbXd3SFFZRFZSME9CQllFRkJRdXN4ZTNXRmJMcmxBSlFPWWYKcjUyTEZNTEdNQjBHQTFVZEpRUVdNQlFHQ0NzR0FRVUZCd01CQmdnckJnRUZCUWNEQWpBTkJna3Foa2lHOXcwQgpBUXNGQUFPQ0FRRUEyVXpneWZXRWlEY3gyN3NUNHJQOGkydGlFbXhZdDBsK1BBSzNxQjhvWWV2TzRDNXo3MGtICmVqV0VIeDJ0YVBEWS9sYUJMMjEvV0tadU5UWVFISFBENWIxdFhnSFhibkw3S3FDNDAxZGs1VnZDYWRUUXN2ZDgKUzhNWGpvaHljOXo5L0cyOTQ4a0xqbUU2RmxoOWREWXJWWUE5eDJPK2hFUEdPYUVPYTFlZVB5bkJnUGF5dlVmTApxakJzdHpMaFdWUUxHQWtYWG1Ocys1Wm5QQnh6REpPTHhoRjJKSWJlUUFjSDVIMHRaclVsbzVaWXlPcUE3czlwCk81Yjg1bzNBTS9PSitDa3RGQlF0ZnZCaGNKVmQ5d3Zsd1Bzayt1eU95MkhJN21OeEtLZ3NCVHQzNzV0ZUEyVHcKVWRIa2hWTmNzQUtYMUg3R05OTE9FQURrc2Q4Nnd1b1h2Zz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    conditions:
+    - lastTransitionTime: "2021-01-08T20:17:59Z"
+      message: Certificate fetched from issuer successfully
+      reason: Issued
+      status: "True"
+      type: Ready
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

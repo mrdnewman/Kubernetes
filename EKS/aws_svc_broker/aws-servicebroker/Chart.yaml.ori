@@ -1,0 +1,14 @@
+apiVersion: v2
+appVersion: 1.0.2
+description: Implementation of the Open Service Broker API for AWS. Deploy Cloudformation
+  templates using k8s resources.
+home: https://aws.amazon.com/partners/servicebroker/
+keywords:
+- osbapi
+- aws
+- broker
+name: aws-servicebroker
+sources:
+- https://github.com/awslabs/aws-servicebroker.git
+- https://github.com/kferrone/aws-servicebroker.git
+version: 1.0.2
