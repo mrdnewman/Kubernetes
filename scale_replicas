@@ -1,5 +1,0 @@
-Scale up/down Desire State Of Running Deployment
--------------------------------------------------
-1.) Describe Current Running Deployment
-$ kubectl get deployments		/// Spits out "deployment_name"
-$ kubectl edit deployment <deployment_name>
