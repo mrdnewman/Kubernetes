@@ -83,7 +83,7 @@ Manages the overall state of the cluster.
 
 ---
 
-## 💪 Worker Node Components (The Muscle)
+## Worker Node Components (The Muscle)
 
 Each node runs these components to host and manage your actual workloads.
 
