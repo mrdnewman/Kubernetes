@@ -121,7 +121,7 @@ Each node runs these components to host and manage your actual workloads.
 
 ---
 
-## 🧭 Cluster Communication Flow
+## Cluster Communication Flow
 
 1. `kubectl apply` → hits `kube-apiserver`
 2. `kube-apiserver` writes state to `etcd`
