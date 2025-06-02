@@ -132,7 +132,7 @@ Each node runs these components to host and manage your actual workloads.
 
 ---
 
-## ✅ TL;DR for Interview
+## TL;DR for Interview
 
 > The **Control Plane** manages the cluster using `kube-apiserver`, `etcd`, `scheduler`, and `controllers`.  
 > The **Worker Nodes** run containers using `kubelet`, `containerd`, and `kube-proxy`.  
