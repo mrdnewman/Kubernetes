@@ -4,6 +4,22 @@ Kubernetes is built on a **Control Plane** (the brains) and **Worker Nodes** (th
 
 ---
 
+## Table of Contents
+- [Control Plane (The Command Center)](#control-plane-the-command-center)
+  - [kube-apiserver](#1-kube-apiserver)
+  - [etcd](#2-etcd)
+  - [kube-scheduler](#3-kube-scheduler)
+  - [kube-controller-manager](#4-kube-controller-manager)
+  - [cloud-controller-manager (Optional)](#5-cloud-controller-manager-optional)
+- [Worker Node Components (The Muscle)](#worker-node-components-the-muscle)
+  - [kubelet](#1-kubelet)
+  - [container runtime](#2-container-runtime)
+  - [kube-proxy](#3-kube-proxy)
+- [Cluster Communication Flow](#cluster-communication-flow)
+- [TL;DR for Interview](#tldr-for-interview)
+
+---
+
 ## 🚨 Control Plane (The Command Center)
 
 Manages the overall state of the cluster.
